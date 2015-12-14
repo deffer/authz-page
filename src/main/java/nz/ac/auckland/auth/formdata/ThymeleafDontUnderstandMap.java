@@ -1,4 +1,4 @@
-package nz.ac.auckland.auth;
+package nz.ac.auckland.auth.formdata;
 
 import java.util.HashMap;
 import java.util.Map;

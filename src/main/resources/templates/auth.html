@@ -20,7 +20,7 @@
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
 
 	<!-- Custom styles for this template -->
-    <link href="css/jumbotron-narrow.css" rel="stylesheet"/>
+    <link href="../css/jumbotron-narrow.css" rel="stylesheet"/>
 
     <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -40,50 +40,38 @@
             <li role="presentation"><a href="#">Contact</a></li>
           </ul>
         </nav>
-        <h3 class="text-muted">Project name</h3>
+        <h4 th:text="'Hello, ' + ${name} + '!'" class="text-muted"></h4>
       </div>
 
       <div class="jumbotron">
-        <h1 th:text="'Hello, ' + ${name} + '!'"> </h1>
-        <p class="lead">This application would like to have authorization to access your data.</p>
+        <h2>Authorize application</h2>
+        <p class="lead" th:text="${appname}+' would like to have authorization to access your data. You can revoke this access any time from your Application pages.'"></p>
+
         <p><a class="btn btn-lg btn-success" href="#" role="button">Allow</a></p>
       </div>
 
       <div class="row marketing">
-          <div class="col-lg-10">
-              <h4>Enter scopes</h4>
-              <form action="#" th:action="@{/auth/submit}" th:object="${map}" method="post">
-                  <p>Scope A: <input type="text" th:field="*{properties['scopeA']}" /></p>
-                  <p>Scope B: <input type="text" th:field="*{properties['scopeB']}" /></p>
-                  <p><input type="submit" value="Submit" /> <input type="reset" value="Reset" /></p>
-              </form>
-          </div>
-
-        <div class="col-lg-6">
-          <h4>Subheading</h4>
-          <p>Donec id elit non mi porta gravida at eget metus. Maecenas faucibus mollis interdum.</p>
-
-          <h4>Subheading</h4>
-          <p>Morbi leo risus, porta ac consectetur ac, vestibulum at eros. Cras mattis consectetur purus sit amet fermentum.</p>
-
-          <h4>Subheading</h4>
-          <p>Maecenas sed diam eget risus varius blandit sit amet non magna.</p>
-        </div>
-
-        <div class="col-lg-6">
-          <h4>Subheading</h4>
-          <p>Donec id elit non mi porta gravida at eget metus. Maecenas faucibus mollis interdum.</p>
-
-          <h4>Subheading</h4>
-          <p>Morbi leo risus, porta ac consectetur ac, vestibulum at eros. Cras mattis consectetur purus sit amet fermentum.</p>
-
-          <h4>Subheading</h4>
-          <p>Maecenas sed diam eget risus varius blandit sit amet non magna.</p>
+          <h3>Requested scopes and their description</h3>
+        <div th:each="scopes: ${scopes}" class="col-lg-6">
+          <h4 th:text="${scopes.key}"></h4>
+          <p th:text="${scopes.value}"></p>
         </div>
       </div>
 
+      <div class="row marketing">
+              <h3>Enter some text for submission test</h3>
+
+              <div class="col-lg-10">
+                  <form action="#" th:action="@{/auth/submit}" th:object="${map}" method="post">
+                      <p>Text A: <input type="text" th:field="*{properties['textA']}" /></p>
+                      <p>Text B: <input type="text" th:field="*{properties['textB']}" /></p>
+                      <p><input type="submit" value="Submit" /> <input type="reset" value="Reset" /></p>
+                  </form>
+              </div>
+      </div>
+
       <footer class="footer">
-        <p>&copy; 2015 Company, Inc.</p>
+        <p>&copy; University of Auckland</p>
       </footer>
 
     </div> <!-- /container -->
