@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
+// not used. just a demostration of what is returned by a call to http://localhost:8001/oauth2?client_id=irina_oauth2_pluto
 public class ClientInfo {
 
 	private String name;

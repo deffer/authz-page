@@ -45,9 +45,15 @@
 
       <div class="jumbotron">
         <h2>Authorize application</h2>
-        <p class="lead" th:text="${appname}+' would like to have authorization to access your data. You can revoke this access any time from your Application pages.'"></p>
+        <p class="lead">
+            <em th:text="${appname}"></em>
+            would like to have authorization to access your data. You can revoke this access any time from your Application pages.
+        </p>
 
-        <p><a class="btn btn-lg btn-success" href="#" role="button">Allow</a></p>
+        <p>
+            <a class="btn btn-lg btn-success" href="#" role="button">Allow</a>
+            <a class="btn btn-lg btn-danger" href="#" role="button">Deny</a>
+        </p>
       </div>
 
       <div class="row marketing">
@@ -59,12 +65,15 @@
       </div>
 
       <div class="row marketing">
-              <h3>Enter some text for submission test</h3>
+              <h3>Enter mock information</h3>
 
               <div class="col-lg-10">
                   <form action="#" th:action="@{/auth/submit}" th:object="${map}" method="post">
-                      <p>Text A: <input type="text" th:field="*{properties['textA']}" /></p>
-                      <p>Text B: <input type="text" th:field="*{properties['textB']}" /></p>
+                      <input type="hidden" th:field="*{properties['client_id']}"/>
+                      <input type="hidden" th:field="*{properties['response_type']}"/>
+                      <!-- also scopes -->
+                      <p>Your user id in Kong (e.g ken123): <input type="text" th:field="*{properties['textA']}" /></p>
+                      <p>Optional anything: <input type="text" th:field="*{properties['textB']}" /></p>
                       <p><input type="submit" value="Submit" /> <input type="reset" value="Reset" /></p>
                   </form>
               </div>
