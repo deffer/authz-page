@@ -5,6 +5,8 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 </head>
 <body>
-<p th:text="'Got result text: ' + ${textA} + '!'" />
+<p th:text="'Got result user id: ' + ${user_id} + '!'" />
+<h3>Form submit:</h3>
+<p th:each="fm: ${map.toProps()}"><span th:text="${fm.key}+' - '+${fm.value}"></span></p>
 </body>
 </html>

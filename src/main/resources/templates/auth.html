@@ -20,7 +20,7 @@
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
 
 	<!-- Custom styles for this template -->
-    <link href="../css/jumbotron-narrow.css" rel="stylesheet"/>
+    <link href="../../css/jumbotron-narrow.css" rel="stylesheet"/>
 
     <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -68,12 +68,13 @@
               <h3>Enter mock information</h3>
 
               <div class="col-lg-10">
-                  <form action="#" th:action="@{/auth/submit}" th:object="${map}" method="post">
-                      <input type="hidden" th:field="*{properties['client_id']}"/>
-                      <input type="hidden" th:field="*{properties['response_type']}"/>
+                  <form action="#" th:action="@{/{apid}/auth/submit(apid=${apiid})}" th:object="${map}" method="post">
+                      <input type="hidden" th:field="*{client_id}"/>
+                      <input type="hidden" th:field="*{response_type}"/>
+                      <input type="hidden" th:field="*{api_id}"/>
                       <!-- also scopes -->
-                      <p>Your user id in Kong (e.g ken123): <input type="text" th:field="*{properties['textA']}" /></p>
-                      <p>Optional anything: <input type="text" th:field="*{properties['textB']}" /></p>
+                      <p>Your user id in Kong (e.g ken123): <input type="text" th:field="*{user_id}" /></p>
+                      <p>Optional anything: <input type="text" /></p>
                       <p><input type="submit" value="Submit" /> <input type="reset" value="Reset" /></p>
                   </form>
               </div>
