@@ -30,7 +30,6 @@ public class AuthorizationController {
         model.addAttribute("scopes", scopes); // to do scopes description
 
         // extract data from parameters and store in session(to do) also pass in hidden fields
-        // to do remember api_id
         authRequest.client_id = sanitize(authRequest.client_id) ?: "irina_oauth2_pluto";
         authRequest.response_type = sanitize(authRequest.response_type) ?: "code";
         authRequest.user_id = "";
@@ -60,7 +59,10 @@ public class AuthorizationController {
 
     // https://spring.io/guides/gs/handling-form-submission/
     @RequestMapping(value="/{api_id}/auth/submit", method= RequestMethod.POST)
-    public String authSubmit(@PathVariable("api_id") String apiId, @ModelAttribute AuthRequest map, Model model) {
+    public String authSubmit(@PathVariable("api_id") String apiId, @ModelAttribute AuthRequest authRequest, Model model) {
+        if (authRequest.actionDeny)
+            return authDeny(authRequest);
+
         // we could call this method to find out unique api id first, however api name works just fine, so skip
         // ApiInfo apiInfo = new RestTemplate().getForObject(kongUrl+"/apis/"+apiId, ApiInfo.class);
 
@@ -72,10 +74,11 @@ public class AuthorizationController {
                 provisionKey = plugin.config.provision_key;
         }
 
-        String authenticatedUserId = map.user_id; // authenticated user from session
-        String clientId = map.client_id; // or take from authRequest (stored in session)
-        String responseType = map.response_type; // take from authRequest (stored in session)
-        map.provision_key = provisionKey;
+        // todo if api (provision key) not found, show error page
+        String authenticatedUserId = authRequest.user_id; // authenticated user from session
+        String clientId = authRequest.client_id; // or take from authRequest (stored in session)
+        String responseType = authRequest.response_type; // take from authRequest (stored in session)
+        authRequest.provision_key = provisionKey;
 
         // now we need to inform Kong that user authenticatedUserId grants authorization to application cliend_id
 
@@ -87,13 +90,11 @@ public class AuthorizationController {
         --data "provision_key=XXX" \
         --data "authenticated_userid=XXX"*/
         model.addAttribute("user_id", authenticatedUserId);
-        model.addAttribute("map", map);
+        model.addAttribute("map", authRequest);
         return "temp";
     }
 
-    @RequestMapping(value="/{api_id}/auth/deny", method= RequestMethod.POST)
-    public String authDeny(@PathVariable("api_id") String apiId, @ModelAttribute AuthRequest authRequest, Model model) {
-        // todo fetch client redirect url
+    public String authDeny(AuthRequest authRequest) {
         String clientCallbackUrl = "unknown"; // todo if app not found, show error page
         RestTemplate restTemplate = new RestTemplate();
         Map clientInfo = restTemplate.getForObject(kongUrl+"/oauth2?client_id="+authRequest.client_id, Map.class);
@@ -103,6 +104,6 @@ public class AuthorizationController {
         // todo append parameters to redirect url in a smart way (assuming there could be other parameters already)
         clientCallbackUrl += "/?error=access_denied&error_description=The+user+denied+access+to+your+application";
 
-        return "redirect: "+clientCallbackUrl;
+        return "redirect:"+clientCallbackUrl;
     }
 }

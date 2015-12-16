@@ -10,6 +10,8 @@ public class AuthRequest {
 	String client_id;
 	String response_type;
 	String scope;
+	String actionAllow = null;
+	String actionDeny = null;
 
 	String user_id; // temp
 	String provision_key; // temp
