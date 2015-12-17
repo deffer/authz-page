@@ -61,6 +61,7 @@
 				<!--a class="btn btn-lg btn-success" href="#" role="button">Allow</a-->
 				<input type="submit" class="btn btn-lg btn-success" href="#" role="button" value="Allow" name="actionAllow"/>
 				<input type="submit" class="btn btn-lg btn-danger" href="#" role="button" value="Deny" name="actionDeny"/>
+				<input type="submit" href="#" role="button" value="Debug" name="actionDebug"/>
 			</p>
 		</div>
 
@@ -80,7 +81,6 @@
 			<div class="col-lg-10">
 				<input type="hidden" th:field="*{client_id}"/>
 				<input type="hidden" th:field="*{response_type}"/>
-				<input type="hidden" th:field="*{api_id}"/>
 				<!-- also scopes -->
 				<p>Your user id in Kong (e.g ken123): <input type="text" th:field="*{user_id}"/></p>
 				<p>Optional anything: <input type="text"/></p>
