@@ -22,6 +22,8 @@ public class AuthorizationController {
     private String kongAdminUrl = "http://localhost:8001";
     private String kongProxyUrl = "https://rs.dev.auckland.ac.nz/";
 
+
+    // http://localhost:8090/pcfdev-oauth/auth?client_id=irina_oauth2_pluto&api_id=25&response_type=code
     @RequestMapping("/{api_id}/auth")
     public String authForm(@PathVariable("api_id") String apiId, AuthRequest authRequest, Model model) {
         Map<String, String> scopes = new HashMap<>();
