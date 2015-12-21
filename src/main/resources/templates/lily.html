@@ -36,27 +36,49 @@
 
 <body>
 <div class="container">
+	<h2>OAuth2 client application demo</h2>
+	<div class="row">
+		<a th:href="@{{theurl}/(theurl=${linkurl},client_id=${client_id},response_type=${response_type})}" class="btn btn-success" role="button">Authorize</a>
+	</div>
 
-	<form action="#" th:action="@{/{apid}/auth/submit(apid=${apiid})}" th:object="${map}" method="post">
+	<hr/>
+
+	<form action="#" th:action="@{/lily}" th:object="${serverInfo}" method="post">
 		<div>
-			<h2>OAuth2 client application demo</h2>
+			<p>
+				Current configuration is below. Any changes to these values need to be saved to session before making authorization request
+			</p>
 
-			<div>
-				<div class="row">
-					<label class="col-lg-3" for="authUrl">Authorization url</label> <input type="text" id="authUrl" name="authUrl"/>
-				</div> <div class="row">
-					<label class="col-lg-3" for="authClientId">ClientId</label> <input type="text" id="authClientId" name="authClientId"/>
-				</div> <div class="row">
-					<label class="col-lg-3" for="authRespType">Response type</label> <input type="text" id="authRespType" name="authRespType"/>
-				</div> <div class="row">
-					<label class="col-lg-3" for="authScopes">Scopes</label> <input title="Comma separated" type="text" id="authScopes" name="authScopes"/>
-				</div> <div class="row">
+			<div class="row"> <label class="col-lg-3" for="authUrl">Authorization url</label>
+				<div class="col-lg-6">
+					<input class="form-control" th:field="*{authUrl}" type="text" id="authUrl"/>
+				</div>
+			</div> <div class="row"> <label class="col-lg-3" for="authClientId">Client Id</label>
+				<div class="col-lg-6">
+					<input class="form-control" th:field="*{clientId}" type="text" id="authClientId"/>
+				</div>
+			</div> <div class="row"> <label class="col-lg-3" for="authClientSecret">Client Secret</label>
+				<div class="col-lg-6">
+					<input class="form-control" th:field="*{clientSecret}" type="text" id="authClientSecret"/>
+				</div>
+			</div> <div class="row"> <label class="col-lg-3" for="authRespType">Response type</label>
+				<div class="col-lg-6">
+					<input class="form-control" th:field="*{authRespType}" type="text" id="authRespType"/>
+				</div>
+			</div> <div class="row"> <label class="col-lg-3" for="authScopes">Scopes</label>
+				<div class="col-lg-6">
+					<input class="form-control" th:field="*{scopes}" title="Comma separated" type="text" id="authScopes"/>
+				</div>
+			</div> <div class="row">
+				<div class="col-lg-6">
 					<!--a class="btn btn-lg btn-success" href="#" role="button">Allow</a-->
-					<input type="submit" href="#" role="button" value="Go" name="actionAuthorize"/>
+					<input class="pull-right" type="submit" role="button" value="Save and reload" name="saveInSession"/>
 				</div>
 			</div>
+
 		</div>
 	</form>
+
 
 </div>
 <!-- /container -->

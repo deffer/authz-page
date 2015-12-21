@@ -26,6 +26,7 @@ public class AuthorizationController {
     // http://localhost:8090/pcfdev-oauth/auth?client_id=irina_oauth2_pluto&api_id=25&response_type=code
     @RequestMapping("/{api_id}/auth")
     public String authForm(@PathVariable("api_id") String apiId, AuthRequest authRequest, Model model) {
+        // todo get scopes from request
         Map<String, String> scopes = new HashMap<>();
         scopes.put("person-read", "Allows application to read person information on your behalf.");
         scopes.put("person-write", "Allows application to update person information on your behalf. Your current role-based authorization will apply.");
@@ -61,6 +62,7 @@ public class AuthorizationController {
     // https://spring.io/guides/gs/handling-form-submission/
     @RequestMapping(value="/{api_id}/auth/submit", method= RequestMethod.POST) // always use POST
     public String authSubmit(@PathVariable("api_id") String apiId, AuthRequest authRequest, Model model) {
+        // temporarily using "actionXXX" param to route requests
         if (authRequest.actionDeny)
             return authDeny(authRequest);
 
