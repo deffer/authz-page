@@ -23,17 +23,18 @@ public class AuthorizationController {
     private String kongProxyUrl = "https://rs.dev.auckland.ac.nz/";
 
 
-    // http://localhost:8090/pcfdev-oauth/auth?client_id=irina_oauth2_pluto&api_id=25&response_type=code
+    // http://localhost:8090/pcfdev-oauth/auth?client_id=irina_oauth2_pluto&response_type=code&scope=read,write
     @RequestMapping("/{api_id}/auth")
     public String authForm(@PathVariable("api_id") String apiId, AuthRequest authRequest, Model model) {
         // todo get scopes from request
+        // todo get scopes description from ?
         Map<String, String> scopes = new HashMap<>();
         scopes.put("person-read", "Allows application to read person information on your behalf.");
         scopes.put("person-write", "Allows application to update person information on your behalf. Your current role-based authorization will apply.");
         model.addAttribute("name", "user");
         model.addAttribute("scopes", scopes); // to do scopes description
 
-        // extract data from parameters and store in session(to do) also pass in hidden fields
+        // extract data from parameters and pass to the view in hidden fields
         authRequest.client_id = sanitize(authRequest.client_id) ?: "irina_oauth2_pluto";
         authRequest.response_type = sanitize(authRequest.response_type) ?: "code";
         authRequest.user_id = "";
@@ -42,10 +43,9 @@ public class AuthorizationController {
         // find out application name
         // call Kong http://localhost:8001/oauth2?client_id=irina_oauth2_pluto
         String appName = "unknown"; // todo if app not found, show error page
-        RestTemplate restTemplate = new RestTemplate();
-        Map clientInfo = restTemplate.getForObject(kongAdminUrl+"/oauth2?client_id="+authRequest.client_id, Map.class);
+        Map clientInfo = new RestTemplate().getForObject(kongAdminUrl+"/oauth2?client_id="+authRequest.client_id, Map.class);
         if (clientInfo["data"]!=null && clientInfo["data"] instanceof List && clientInfo["data"].size()>0)
-            appName = (String) clientInfo["data"][0]["name"]; // ((Map)elements.get(0)).get("name");
+            appName = (String) clientInfo["data"][0]["name"];
 
         model.addAttribute("appname", appName);
         model.addAttribute("apiid", apiId);
@@ -53,7 +53,7 @@ public class AuthorizationController {
         return "auth";
     }
 
-    // never trust any request that didnt come from trusted services
+    // never trust any data that didnt come from trusted services
     private String sanitize(String input){
         // implement
         return input;

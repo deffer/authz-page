@@ -9,13 +9,11 @@ import org.springframework.web.bind.annotation.*
 import org.springframework.web.bind.support.SessionStatus
 
 @Controller
-@SessionAttributes("serverInfo")
+@SessionAttributes(["serverInfo", "token"])
 class ClientAppControllerExample {
 	// to do take from properties
 	private String kongProxyUrl = "https://rs.dev.auckland.ac.nz/";
 	private String apiAuthPath ="pcfdevo/"
-	private String personApiPath = "person/api/"
-	private String personMethodUrl = "person/me"
 
 	@RequestMapping("/lily")
 	public String appForm(Model model) {
@@ -28,17 +26,17 @@ class ClientAppControllerExample {
 		return "lily";
 	}
 
-	@RequestMapping("/lily/auth_callback")
-	@ResponseBody // temporarily
+	@RequestMapping(value="/lily/auth_callback")
 	public String authCallback(@RequestParam String code, Model model) {
 
 		println "Client application received code "+code
 		// obtain token
-		String token = requestToken(model.asMap().get("serverInfo") as ServerInfo, code)
+		TokenResponse token = requestToken(model.asMap().get("serverInfo") as ServerInfo, code)
 
-		// todo
-		//model.addAttribute("code", code);
-		return token;
+		model.addAttribute("text", token.toString());
+		model.addAttribute("nextUrl", "lily/person")
+		model.addAttribute("token", token)
+		return "generic_response"; // have to render a view because Spring MVC doesnt support both session attributes and plain text result
 	}
 
 	@RequestMapping(value="/lily", method= RequestMethod.POST)
@@ -54,9 +52,23 @@ class ClientAppControllerExample {
 	@RequestMapping("/lily/closeSession")
 	public String closeSession(SessionStatus sessionStatus){
 		sessionStatus.setComplete();
-		return "something"
+		return "redirect:/lily/"
 	}
 
+	@RequestMapping("/lily/person")
+	public String showData(Model model){
+		TokenResponse tokenResponse = model.asMap().get("token") as TokenResponse;
+		if (tokenResponse?.access_token) {
+			String result = queryData(tokenResponse)
+			model.addAttribute("text", result);
+			model.addAttribute("nextUrl", "lily/closeSession")
+			return "generic_response"
+		}else{
+			model.addAttribute("text", "[ERROR] No token info found in session")
+			model.addAttribute("nextUrl", "lily")
+		}
+
+	}
 
 	@ModelAttribute("serverInfo")
 	public ServerInfo addStuffToScope(){
@@ -67,14 +79,14 @@ class ClientAppControllerExample {
 		)
 	}
 
-	private String requestToken(ServerInfo serverInfo, String code){
+	private TokenResponse requestToken(ServerInfo serverInfo, String code){
 
 		String tokenUrl = kongProxyUrl+apiAuthPath+"oauth2/token" // no double slash!!!
 		println "Calling $tokenUrl"
 		//token?grant_type=authorization_code&code=aL4HD6&client_id=faedda93-4c40-4f91-bc63-9efd5e5ba85f
 		//String fullUrl = "${tokenUrl}?grant_type=authorization_code&code=${code}&client_id=${serverInfo.clientId}&client_secret=${serverInfo.clientSecret}"
 
-		def result = null;
+		TokenResponse result = null;
 
 		// perform a POST request, expecting JSON response
 		// https://rs.dev.auckland.ac.nz//pcfdevo/oauth2/token
@@ -83,26 +95,8 @@ class ClientAppControllerExample {
 			requestContentType = ContentType.URLENC
 			body = [client_id: serverInfo.clientId, grant_type: "authorization_code",
 					client_secret: serverInfo.clientSecret, code:code ]
-
-			// response handler for a success response code
-			response.success = { resp, reader ->
+			def handler = {resp, reader, func ->
 				println "response status: ${resp.statusLine}"
-				println 'Headers: -----------'
-				resp.headers.each { h ->
-					println " ${h.name} : ${h.value}"
-				}
-
-				/*if (reader instanceof Map && reader.containsKey("token"))
-					result = reader.get("token")
-				else {*/
-					println 'Response data: -----'
-					println reader
-					println '--------------------'
-				//}
-				result = reader.toString()
-			}
-			response.failure = {resp, reader ->
-				println "ERROR response status: ${resp.statusLine}"
 				println 'Headers: -----------'
 				resp.headers.each { h ->
 					println " ${h.name} : ${h.value}"
@@ -110,10 +104,50 @@ class ClientAppControllerExample {
 				println 'Response data: -----'
 				println reader
 				println '--------------------'
-				result = reader.toString()
+				func(resp, reader);
 			}
+			response.success = handler.rcurry({resp, reader->
+				result = reader as TokenResponse
+			})
+			response.failure = handler.rcurry({resp, reader->
+				result = new TokenResponse(errorMessage: reader.toString())
+			})
 		}
 		return result
+	}
+
+	private String queryData(TokenResponse token){
+		//curl -i -X POST --url http://localhost:80/pcfdevo   --header 'Content-Type: application/json'
+		// --data '{"query":{"keywords":"museum","filter":"All","undergraduate":true},"nPerPage":8,"page":0}'
+
+		String result
+		// should work when a correct access_token is being sent in the querystring: access_token = token.access_token)
+		// or in an authorization header (bearer): authorization = "bearer "..token.access_token
+		// or in an authorization header (token): authorization = "token "..token.access_token
+		def queryData = [query: [keywords:"museum", filter:"All", undergraduate: true], nPerPage: 8, page: 0]
+		def http = new HTTPBuilder(kongProxyUrl+apiAuthPath)
+		http.request(Method.POST, ContentType.JSON) {
+			requestContentType = ContentType.JSON
+			body = queryData
+			headers = [Authorization: "bearer "+token.access_token]
+			def handler = {resp, reader, func ->
+				println "response status: ${resp.statusLine}"
+				println 'Headers: -----------'
+				resp.headers.each { h ->
+					println " ${h.name} : ${h.value}"
+				}
+				println 'Response data: -----'
+				println reader
+				println '--------------------'
+				func(resp, reader);
+			}
+			response.success = handler.rcurry({resp, reader->
+				result = reader.toString()
+			})
+			response.failure = handler.rcurry({resp, reader->
+				result = reader.toString()
+			})
+		}
 	}
 
 	public static class ServerInfo {
@@ -123,6 +157,7 @@ class ClientAppControllerExample {
 		String authRespType
 		String scopes
 	}
+
 
 	public static class TokenResponse {
 		/*
@@ -137,5 +172,15 @@ class ClientAppControllerExample {
 		String token_type
 		String access_token
 		String expires_in
+
+		String errorMessage // not part of teh response. just a way to pass error message to browser if needed
+
+		public String toString(){
+			if (errorMessage)
+				return errorMessage
+			else{
+				return [refresh_token: refresh_token, token_type: token_type, access_token: access_token, expires_in: expires_in].toString()
+			}
+		}
 	}
 }

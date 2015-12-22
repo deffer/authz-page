@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+	<span th:text="${text}"></span>
+	<p>
+		<a th:href="@{/{nurl}(nurl=${nextUrl})}">Next</a>
+	</p>
+</body>
+</html>
