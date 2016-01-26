@@ -5,7 +5,7 @@
 	<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
 	<meta name="viewport" content="width=device-width, initial-scale=1"/>
 	<!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
-	<title>Bootstrap 101 Template</title>
+	<title>Sample OAuth2 app</title>
 
 	<!-- Bootstrap -->
 	<!--link href="css/bootstrap.min.css" rel="stylesheet"-->
@@ -37,6 +37,9 @@
 <body>
 <div class="container">
 	<h2>OAuth2 client application demo</h2>
+	<p>This is the API we are trying to access. Its protected by OAuth2.</p>
+	<p><a th:href="${apiurl}" th:text="${apiurl}"></a></p>
+	<p>Press Authorize button to obtain user authorization</p>
 	<div class="row">
 		<a th:href="@{{theurl}/(theurl=${linkurl},client_id=${client_id},response_type=${response_type})}" class="btn btn-success" role="button">Authorize</a>
 	</div>

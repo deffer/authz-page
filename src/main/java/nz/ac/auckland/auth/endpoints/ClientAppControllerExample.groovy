@@ -3,6 +3,7 @@ package nz.ac.auckland.auth.endpoints
 import groovyx.net.http.ContentType
 import groovyx.net.http.HTTPBuilder
 import groovyx.net.http.Method
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
@@ -12,13 +13,23 @@ import org.springframework.web.bind.support.SessionStatus
 @SessionAttributes(["serverInfo", "token"])
 class ClientAppControllerExample {
 	// to do take from properties
-	private String kongProxyUrl = "https://rs.dev.auckland.ac.nz/";
+	private String kongProxyUrl = "https://proxy.api.dev.auckland.ac.nz/";
 	private String apiAuthPath ="pcfdevo/"
+
+	@Value('${lily.authzEndpoint}')
+	private String authzEndpoint
+
+	@Value('${lily.clientId}')
+	private String clientId
+
+	@Value('${lily.clientSecret}')
+	private String clientSecret
 
 	@RequestMapping("/lily")
 	public String appForm(Model model) {
 
 		ServerInfo serverInfo = model.asMap().get("serverInfo") as ServerInfo
+		model.addAttribute("apiurl", kongProxyUrl+apiAuthPath)
 		model.addAttribute("linkurl", serverInfo.authUrl)
 		model.addAttribute("client_id", serverInfo.clientId)
 		model.addAttribute("response_type", serverInfo.authRespType)
@@ -27,20 +38,35 @@ class ClientAppControllerExample {
 	}
 
 	@RequestMapping(value="/lily/auth_callback")
-	public String authCallback(@RequestParam String code, Model model) {
+	public String authCallback(@RequestParam(name = "code", defaultValue = "") String code,
+							   @RequestParam(name = "error", defaultValue = "") String error,
+							   Model model) {
 
-		println "Client application received code "+code
-		// obtain token
-		TokenResponse token = requestToken(model.asMap().get("serverInfo") as ServerInfo, code)
+		if (error || !code){
+			if (error.contains("access_denied"))
+				model.addAttribute("text", "Sorry you don't trust me :(");
+			else
+				model.addAttribute("text", "Unknown error, code - '"+code+"'");
+			model.addAttribute("action", "Back to start");
+			model.addAttribute("nextUrl", "lily")
+		}else {
+			println "Client application received code " + code
+			// obtain token
+			TokenResponse token = requestToken(model.asMap().get("serverInfo") as ServerInfo, code)
 
-		model.addAttribute("text", token.toString());
-		model.addAttribute("nextUrl", "lily/person")
-		model.addAttribute("token", token)
-		return "generic_response"; // have to render a view because Spring MVC doesnt support both session attributes and plain text result
+			model.addAttribute("text", token.toString());
+			model.addAttribute("action", "Next");
+			model.addAttribute("nextUrl", "lily/person")
+			model.addAttribute("token", token)
+		}
+		// note: I wanted to return a plain text here, however Spring MVC doesnt support both session attributes
+		//   and plain text results in the same class, therefore I have to render a view
+		return "generic_response";
 	}
 
 	@RequestMapping(value="/lily", method= RequestMethod.POST)
 	public String saveInSession(@ModelAttribute("serverInfo") ServerInfo serverInfo, Model model) {
+		model.addAttribute("apiurl", kongProxyUrl+apiAuthPath)
 		model.addAttribute("linkurl", serverInfo.authUrl)
 		model.addAttribute("client_id", serverInfo.clientId)
 		model.addAttribute("response_type", serverInfo.authRespType)
@@ -61,10 +87,12 @@ class ClientAppControllerExample {
 		if (tokenResponse?.access_token) {
 			String result = queryData(tokenResponse)
 			model.addAttribute("text", result);
+			model.addAttribute("action", "Close");
 			model.addAttribute("nextUrl", "lily/closeSession")
 			return "generic_response"
 		}else{
 			model.addAttribute("text", "[ERROR] No token info found in session")
+			model.addAttribute("action", "Back to start")
 			model.addAttribute("nextUrl", "lily")
 		}
 
@@ -72,9 +100,9 @@ class ClientAppControllerExample {
 
 	@ModelAttribute("serverInfo")
 	public ServerInfo addStuffToScope(){
-		return new ServerInfo(authUrl: "http://localhost:8090/pcfdev-oauth/auth",
-				clientId: "irina_oauth2_pluto",
-				clientSecret: "124955fdb9544860c86ac2d7fce63ec2",
+		return new ServerInfo(authUrl: authzEndpoint,
+				clientId: clientId,
+				clientSecret: clientSecret,
 				authRespType: "code", scopes: "read, write"
 		)
 	}

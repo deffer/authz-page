@@ -5,7 +5,7 @@
 	<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
 	<meta name="viewport" content="width=device-width, initial-scale=1"/>
 	<!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
-	<title>Bootstrap 101 Template</title>
+	<title>University of Auckland Authorization request</title>
 
 	<!-- Bootstrap -->
 	<!--link href="css/bootstrap.min.css" rel="stylesheet"-->
@@ -35,8 +35,22 @@
 </head>
 
 <body>
+<div id='header' style="max-width:1055px; margin:auto; padding: 14px; background-image: url(https://iam.auckland.ac.nz/static/82Kppr4O6Jp7ncyFnC6PZfOINFnty6JFXTr1CNIincN.png);">
+	<div class="swagger-ui-wrap" style="margin-left: auto; margin-right:auto;max-width: 906px;">
+		<a href="/">
+			<img alt="UoA" src="https://iam.auckland.ac.nz/static/7wjBIGzZfYiiBJ9LBDmme95ZVv9LqSFXfCSS35S9yto.jpg" data-aui-responsive-header-index="0"/>
+		</a>
+		<form id='api_selector' style="float:right;">
+			<div class='input' style="margin-top: 35px; float: left; color: #fff;"><span th:text="'Hello, ' + ${name} + '!'"></span></div>
+			<div class='input' style="margin-top: 35px; margin-left: 20px; float: left;"><input placeholder="http://example.com/api" id="input_baseUrl" name="baseUrl" type="text"/></div>
+			<div class='input' style="margin-top: 35px; margin-left: 20px; width: 63px; float:left;" ><input type="button" id="explore" value="Help"/></div>
+		</form>
+	</div>
+</div>
+
 <div class="container">
-	<div class="header clearfix">
+
+	<!--div class="header clearfix">
 		<nav>
 			<ul class="nav nav-pills pull-right">
 				<li role="presentation" class="active"><a href="#">Home</a></li>
@@ -45,14 +59,14 @@
 			</ul>
 		</nav>
 		<h4 th:text="'Hello, ' + ${name} + '!'" class="text-muted"></h4>
-	</div>
-
+	</div-->
+	<div class="header"></div>
 	<form action="#" th:action="@{/{apid}/auth/submit(apid=${apiid})}" th:object="${map}" method="post">
 		<div class="jumbotron">
 			<h2>Authorize application</h2>
 
 			<p class="lead">
-				<em th:text="${appname}"></em>
+				<em th:text="${appname}"></em> at <em th:text="${appurl}"></em>
 				would like to have authorization to access your data. You can revoke this access any time from your Application
 				pages.
 			</p>
@@ -61,16 +75,14 @@
 				<div class="col-lg-10">
 					<input type="hidden" th:field="*{client_id}"/>
 					<input type="hidden" th:field="*{response_type}"/>
-					<!-- also scopes -->
-					Your user id in Kong, e.g ken123: <input type="text" th:field="*{user_id}"/>
 				</div>
 			</div>
 
-			<div class="row marketing">
+			<div class="row">
 				<!--a class="btn btn-lg btn-success" href="#" role="button">Allow</a-->
-				<input type="submit" class="btn btn-success" role="button" value="Allow" name="actionAllow"/>
-				<input type="submit" class="btn btn-danger" role="button" value="Deny" name="actionDeny"/>
-				<input type="submit" class="btn" role="button" value="Debug" name="actionDebug"/>
+				<input type="submit" class="btn-small btn-success" role="button" value="Allow" name="actionAllow"/>
+				<input type="submit" class="btn-small btn-danger" role="button" value="Deny" name="actionDeny"/>
+				<input type="submit" class="btn-small" role="button" value="Debug" name="actionDebug"/>
 			</div>
 		</div>
 
@@ -81,6 +93,12 @@
 				<h4 th:text="${scopes.key}"></h4>
 
 				<p th:text="${scopes.value}"></p>
+			</div>
+		</div>
+
+		<div class="row">
+			<div class="col-lg-10">
+				Overwrite your upi (DEBUG): <input type="text" th:field="*{user_id}"/>
 			</div>
 		</div>
 	</form>

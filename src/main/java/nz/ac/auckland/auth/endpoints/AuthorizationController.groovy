@@ -8,46 +8,55 @@ import nz.ac.auckland.auth.formdata.AuthRequest
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ModelAttribute
-import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod
 import org.springframework.web.client.RestTemplate
 
 @Controller
 // to do:  add csrf protection to prevent user unknowingly submitting approval by following specially crafted link
+//         (using POST should prevent it, but its better to have more protection in place)
 // do NOT enable CORS on any of these method
 public class AuthorizationController {
 
     // to do take from properties
-    private String kongAdminUrl = "http://localhost:8001";
-    private String kongProxyUrl = "https://rs.dev.auckland.ac.nz/";
+    private String kongAdminUrl = "https://admin.api.dev.auckland.ac.nz/";
+    private String kongProxyUrl = "https://proxy.api.dev.auckland.ac.nz";
 
 
     // http://localhost:8090/pcfdev-oauth/auth?client_id=irina_oauth2_pluto&response_type=code&scope=read,write
     @RequestMapping("/{api_id}/auth")
-    public String authForm(@PathVariable("api_id") String apiId, AuthRequest authRequest, Model model) {
+    public String authForm(@RequestHeader(value="REMOTE_USER", defaultValue = "NULL") String userId,
+                           @PathVariable("api_id") String apiId, AuthRequest authRequest, Model model) {
         // todo get scopes from request
         // todo get scopes description from ?
+        // todo if userId is NULL, show error (user is not authenticated, SSO failed??)
         Map<String, String> scopes = new HashMap<>();
         scopes.put("person-read", "Allows application to read person information on your behalf.");
         scopes.put("person-write", "Allows application to update person information on your behalf. Your current role-based authorization will apply.");
-        model.addAttribute("name", "user");
         model.addAttribute("scopes", scopes); // to do scopes description
 
         // extract data from parameters and pass to the view in hidden fields
         authRequest.client_id = sanitize(authRequest.client_id) ?: "irina_oauth2_pluto";
         authRequest.response_type = sanitize(authRequest.response_type) ?: "code";
-        authRequest.user_id = "";
+        authRequest.user_id = userId!="NULL"? userId:"";
         model.addAttribute("map", authRequest);
+        model.addAttribute("name", authRequest.user_id?:"user");
 
         // find out application name
         // call Kong http://localhost:8001/oauth2?client_id=irina_oauth2_pluto
-        String appName = "unknown"; // todo if app not found, show error page
+        String appName = "unknown" // todo if app not found, show error page
+        String clientCallbackUrl = "unknown"
         Map clientInfo = new RestTemplate().getForObject(kongAdminUrl+"/oauth2?client_id="+authRequest.client_id, Map.class);
-        if (clientInfo["data"]!=null && clientInfo["data"] instanceof List && clientInfo["data"].size()>0)
+        if (clientInfo["data"]!=null && clientInfo["data"] instanceof List && clientInfo["data"].size()>0){
             appName = (String) clientInfo["data"][0]["name"];
+            clientCallbackUrl = (String) clientInfo["data"][0]["redirect_uri"];
+        }
 
+        URI uri = new URI(clientCallbackUrl)
         model.addAttribute("appname", appName);
+        model.addAttribute("appurl", (uri.getScheme()?uri.getScheme()+"://":"") +uri.getHost());
         model.addAttribute("apiid", apiId);
 
         return "auth";
@@ -61,8 +70,9 @@ public class AuthorizationController {
 
     // https://spring.io/guides/gs/handling-form-submission/
     @RequestMapping(value="/{api_id}/auth/submit", method= RequestMethod.POST) // always use POST
-    public String authSubmit(@PathVariable("api_id") String apiId, AuthRequest authRequest, Model model) {
-        // temporarily using "actionXXX" param to route requests
+    public String authSubmit(@RequestHeader(value="REMOTE_USER", defaultValue = "NULL") String userId,
+                             @PathVariable("api_id") String apiId, AuthRequest authRequest, Model model) {
+        // temporarily using "actionXXX" param to route requests to allow,deny or debug
         if (authRequest.actionDeny)
             return authDeny(authRequest);
 
@@ -77,23 +87,28 @@ public class AuthorizationController {
         }
 
         // todo if api (or provision key) not found, show error page
-        String authenticatedUserId = authRequest.user_id; // todo take authenticated user from session and save into authRequest
-        authRequest.provision_key = provisionKey;
-        authRequest.submitTo = apiInfo.request_path+"/oauth2/authorize"
+
 
         // now we need to inform Kong that user authenticatedUserId grants authorization to application cliend_id
-        // todo if result is not response_uri, then show error page
-        authRequest.kongResponse = submitAuthorization(authRequest);
+        String submitTo = apiInfo.request_path+"/oauth2/authorize"
 
-        if (authRequest.actionDebug || !(authRequest.kongResponse)) {
-            model.addAttribute("user_id", authenticatedUserId);
+        // todo if result is not response_uri, then show error page
+        String kongResponse = submitAuthorization(userId, submitTo, provisionKey, authRequest);
+
+        if (authRequest.actionDebug || !(kongResponse)) {
+            model.addAttribute("user_id", userId);
             model.addAttribute("map", authRequest);
+            model.addAttribute("provision_key", provisionKey);
+            model.addAttribute("submitTo", kongProxyUrl+submitTo);
+            model.addAttribute("kongResponse", kongResponse);
+
             return "temp";
         }else
-            return "redirect:"+authRequest.kongResponse
+            return "redirect:"+kongResponse
     }
 
-    private String submitAuthorization(AuthRequest authRequest){
+    private String submitAuthorization(String authenticatedUserId, String submitTo, String provisionKey,
+                                       AuthRequest authRequest){
         /*$ curl https://your.api.com/oauth2/authorize \
             --header "Authorization: Basic czZCaGRSa3F0MzpnWDFmQmF0M2JW" \
             --data "client_id=XXX" \
@@ -106,11 +121,11 @@ public class AuthorizationController {
         def redirect_uri = null;
 
         // perform a POST request, expecting JSON response (redirect url)
-        def http = new HTTPBuilder(kongProxyUrl+authRequest.submitTo)
+        def http = new HTTPBuilder(kongProxyUrl+submitTo)
         http.request(Method.POST, ContentType.JSON) {
             requestContentType = ContentType.URLENC
             body = [client_id: authRequest.client_id, response_type: authRequest.response_type,
-                    scope: authRequest.scope,provision_key: authRequest.provision_key, authenticated_userid:authRequest.user_id ]
+                    scope: authRequest.scope,provision_key: provisionKey, authenticated_userid:authenticatedUserId ]
             // response handler for a success response code
             response.success = { resp, reader ->
                 println "response status: ${resp.statusLine}"
@@ -149,7 +164,7 @@ public class AuthorizationController {
         if (clientInfo["data"]!=null && clientInfo["data"] instanceof List && clientInfo["data"].size()>0)
             clientCallbackUrl = (String) clientInfo["data"][0]["redirect_uri"];
 
-        // todo append parameters to redirect url in a smart way (assuming there could be other parameters already)
+        // todo build redirect url in a smart way (assuming there could be other parameters already)
         clientCallbackUrl += "/?error=access_denied&error_description=The+user+denied+access+to+your+application";
 
         return "redirect:"+clientCallbackUrl;

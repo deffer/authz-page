@@ -9,14 +9,13 @@ public class AuthRequest {
 	String client_id;
 	String response_type;
 	String scope;
+
+	// temporarily using these flags as indicators of what button was pressed
 	String actionAllow = null;
 	String actionDeny = null;
 	String actionDebug = null;
 
-	String user_id; // temp
-	String provision_key; // temp
-	String submitTo; // temp
-	String kongResponse; //temp
+	String user_id; // temp, for debug
 
 	public Map toProps(){
 		Map result = new HashMap<>()
