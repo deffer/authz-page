@@ -20,153 +20,157 @@ import org.springframework.web.client.RestTemplate
 // do NOT enable CORS on any of these method
 public class AuthorizationController {
 
-    // to do take from properties
-    private String kongAdminUrl = "https://admin.api.dev.auckland.ac.nz/";
-    private String kongProxyUrl = "https://proxy.api.dev.auckland.ac.nz";
+	// to do take from properties
+	private String kongAdminUrl = "https://admin.api.dev.auckland.ac.nz/";
+	private String kongProxyUrl = "https://proxy.api.dev.auckland.ac.nz";
 
+	// http://localhost:8090/pcfdev-oauth/auth?client_id=irina_oauth2_pluto&response_type=code&scope=read,write
+	@RequestMapping("/{api_id}/auth")
+	public String authForm(@RequestHeader(value = "REMOTE_USER", defaultValue = "NULL") String userId,
+	                       @PathVariable("api_id") String apiId, AuthRequest authRequest, Model model) {
+		// todo get scopes from request
+		// todo get scopes description from ?
+		// todo if userId is NULL, show error (user is not authenticated, SSO failed??)
+		Map<String, String> scopes = new HashMap<>();
+		scopes.put("person-read", "Allows application to read person information on your behalf.");
+		scopes.put("person-write", "Allows application to update person information on your behalf. Your current role-based authorization will apply.");
+		model.addAttribute("scopes", scopes); // to do scopes description
 
-    // http://localhost:8090/pcfdev-oauth/auth?client_id=irina_oauth2_pluto&response_type=code&scope=read,write
-    @RequestMapping("/{api_id}/auth")
-    public String authForm(@RequestHeader(value="REMOTE_USER", defaultValue = "NULL") String userId,
-                           @PathVariable("api_id") String apiId, AuthRequest authRequest, Model model) {
-        // todo get scopes from request
-        // todo get scopes description from ?
-        // todo if userId is NULL, show error (user is not authenticated, SSO failed??)
-        Map<String, String> scopes = new HashMap<>();
-        scopes.put("person-read", "Allows application to read person information on your behalf.");
-        scopes.put("person-write", "Allows application to update person information on your behalf. Your current role-based authorization will apply.");
-        model.addAttribute("scopes", scopes); // to do scopes description
+		// extract data from parameters and pass to the view in hidden fields
+		authRequest.client_id = sanitize(authRequest.client_id) ?: "irina_oauth2_pluto";
+		authRequest.response_type = sanitize(authRequest.response_type) ?: "code";
+		authRequest.user_id = userId != "NULL" ? userId : "";
+		model.addAttribute("map", authRequest);
+		model.addAttribute("name", authRequest.user_id ?: "user");
 
-        // extract data from parameters and pass to the view in hidden fields
-        authRequest.client_id = sanitize(authRequest.client_id) ?: "irina_oauth2_pluto";
-        authRequest.response_type = sanitize(authRequest.response_type) ?: "code";
-        authRequest.user_id = userId!="NULL"? userId:"";
-        model.addAttribute("map", authRequest);
-        model.addAttribute("name", authRequest.user_id?:"user");
+		// find out application name
+		// call Kong http://localhost:8001/oauth2?client_id=irina_oauth2_pluto
+		String appName = "unknown" // todo if app not found, show error page
+		String clientCallbackUrl = "unknown"
+		Map clientInfo = new RestTemplate().getForObject(kongAdminUrl + "/oauth2?client_id=" + authRequest.client_id, Map.class);
+		if (clientInfo["data"] != null && clientInfo["data"] instanceof List && clientInfo["data"].size() > 0) {
+			appName = (String) clientInfo["data"][0]["name"];
+			def callbackFromKong = clientInfo["data"][0]["redirect_uri"];
+			// was string, now its an array since Kong > 0.6
+			if (callbackFromKong != null && !(callbackFromKong instanceof String))
+				clientCallbackUrl = (String) callbackFromKong[0];
+			else
+				clientCallbackUrl = (String) callbackFromKong;
+		}
 
-        // find out application name
-        // call Kong http://localhost:8001/oauth2?client_id=irina_oauth2_pluto
-        String appName = "unknown" // todo if app not found, show error page
-        String clientCallbackUrl = "unknown"
-        Map clientInfo = new RestTemplate().getForObject(kongAdminUrl+"/oauth2?client_id="+authRequest.client_id, Map.class);
-        if (clientInfo["data"]!=null && clientInfo["data"] instanceof List && clientInfo["data"].size()>0){
-            appName = (String) clientInfo["data"][0]["name"];
-            clientCallbackUrl = (String) clientInfo["data"][0]["redirect_uri"];
-        }
+		URI uri = new URI(clientCallbackUrl)
+		model.addAttribute("appname", appName);
+		model.addAttribute("appurl", (uri.getScheme() ? uri.getScheme() + "://" : "") + uri.getHost());
+		model.addAttribute("apiid", apiId);
 
-        URI uri = new URI(clientCallbackUrl)
-        model.addAttribute("appname", appName);
-        model.addAttribute("appurl", (uri.getScheme()?uri.getScheme()+"://":"") +uri.getHost());
-        model.addAttribute("apiid", apiId);
+		return "auth";
+	}
 
-        return "auth";
-    }
+	// never trust any data that didnt come from trusted services
+	private String sanitize(String input) {
+		// implement
+		return input;
+	}
 
-    // never trust any data that didnt come from trusted services
-    private String sanitize(String input){
-        // implement
-        return input;
-    }
+	// https://spring.io/guides/gs/handling-form-submission/
+	@RequestMapping(value = "/{api_id}/auth/submit", method = RequestMethod.POST)
+	// always use POST
+	public String authSubmit(@RequestHeader(value = "REMOTE_USER", defaultValue = "NULL") String userId,
+	                         @PathVariable("api_id") String apiId, AuthRequest authRequest, Model model) {
+		// temporarily using "actionXXX" param to route requests to allow,deny or debug
+		if (authRequest.actionDeny)
+			return authDeny(authRequest);
 
-    // https://spring.io/guides/gs/handling-form-submission/
-    @RequestMapping(value="/{api_id}/auth/submit", method= RequestMethod.POST) // always use POST
-    public String authSubmit(@RequestHeader(value="REMOTE_USER", defaultValue = "NULL") String userId,
-                             @PathVariable("api_id") String apiId, AuthRequest authRequest, Model model) {
-        // temporarily using "actionXXX" param to route requests to allow,deny or debug
-        if (authRequest.actionDeny)
-            return authDeny(authRequest);
+		// fetch api url and oauth2 provision key for given api
+		String provisionKey = null;
+		RestTemplate rest = new RestTemplate();
+		ApiInfo apiInfo = rest.getForObject(kongAdminUrl + "/apis/" + apiId, ApiInfo.class);
+		Map pluginInfo = rest.getForObject(kongAdminUrl + "/apis/" + apiId + "/plugins", Map.class);
+		pluginInfo.data.each { plugin ->
+			if (plugin.name == "oauth2")
+				provisionKey = plugin.config.provision_key;
+		}
 
-        // fetch api url and oauth2 provision key for given api
-        String provisionKey = null;
-        RestTemplate rest = new RestTemplate();
-        ApiInfo apiInfo = rest.getForObject(kongAdminUrl+"/apis/"+apiId, ApiInfo.class);
-        Map pluginInfo = rest.getForObject(kongAdminUrl+"/apis/"+apiId+"/plugins", Map.class);
-        pluginInfo.data.each {plugin ->
-            if (plugin.name== "oauth2")
-                provisionKey = plugin.config.provision_key;
-        }
+		// todo if api (or provision key) not found, show error page
 
-        // todo if api (or provision key) not found, show error page
+		// now we need to inform Kong that user authenticatedUserId grants authorization to application cliend_id
+		String submitTo = apiInfo.request_path + "/oauth2/authorize"
 
+		// todo if result is not response_uri, then show error page
+		String kongResponse = submitAuthorization(userId, submitTo, provisionKey, authRequest);
 
-        // now we need to inform Kong that user authenticatedUserId grants authorization to application cliend_id
-        String submitTo = apiInfo.request_path+"/oauth2/authorize"
+		if (authRequest.actionDebug || !(kongResponse)) {
+			model.addAttribute("user_id", userId);
+			model.addAttribute("map", authRequest);
+			model.addAttribute("provision_key", provisionKey);
+			model.addAttribute("submitTo", kongProxyUrl + submitTo);
+			model.addAttribute("kongResponse", kongResponse);
 
-        // todo if result is not response_uri, then show error page
-        String kongResponse = submitAuthorization(userId, submitTo, provisionKey, authRequest);
+			return "temp";
+		} else
+			return "redirect:" + kongResponse
+	}
 
-        if (authRequest.actionDebug || !(kongResponse)) {
-            model.addAttribute("user_id", userId);
-            model.addAttribute("map", authRequest);
-            model.addAttribute("provision_key", provisionKey);
-            model.addAttribute("submitTo", kongProxyUrl+submitTo);
-            model.addAttribute("kongResponse", kongResponse);
+	private String submitAuthorization(String authenticatedUserId, String submitTo, String provisionKey,
+	                                   AuthRequest authRequest) {
+		/*$ curl https://your.api.com/oauth2/authorize \
+			--header "Authorization: Basic czZCaGRSa3F0MzpnWDFmQmF0M2JW" \
+			--data "client_id=XXX" \
+			--data "response_type=XXX" \
+			--data "scope=XXX" \
+			--data "provision_key=XXX" \
+			--data "authenticated_userid=XXX"
+		*/
 
-            return "temp";
-        }else
-            return "redirect:"+kongResponse
-    }
+		def redirect_uri = null;
 
-    private String submitAuthorization(String authenticatedUserId, String submitTo, String provisionKey,
-                                       AuthRequest authRequest){
-        /*$ curl https://your.api.com/oauth2/authorize \
-            --header "Authorization: Basic czZCaGRSa3F0MzpnWDFmQmF0M2JW" \
-            --data "client_id=XXX" \
-            --data "response_type=XXX" \
-            --data "scope=XXX" \
-            --data "provision_key=XXX" \
-            --data "authenticated_userid=XXX"
-        */
+		// perform a POST request, expecting JSON response (redirect url)
+		def http = new HTTPBuilder(kongProxyUrl + submitTo)
+		http.request(Method.POST, ContentType.JSON) {
+			requestContentType = ContentType.URLENC
+			body = [client_id: authRequest.client_id, response_type: authRequest.response_type,
+			        scope    : authRequest.scope, provision_key: provisionKey, authenticated_userid: authenticatedUserId]
+			// response handler for a success response code
+			response.success = { resp, reader ->
+				println "response status: ${resp.statusLine}"
+				println 'Headers: -----------'
+				resp.headers.each { h ->
+					println " ${h.name} : ${h.value}"
+				}
 
-        def redirect_uri = null;
+				if (reader instanceof Map && reader.containsKey("redirect_uri"))
+					redirect_uri = reader.get("redirect_uri")
+				else {
+					println 'Response data: -----'
+					println reader
+					println '--------------------'
+				}
+			}
+			response.failure = { resp, reader ->
+				println "ERROR response status: ${resp.statusLine}"
+				println 'Headers: -----------'
+				resp.headers.each { h ->
+					println " ${h.name} : ${h.value}"
+				}
+				println 'Response data: -----'
+				println reader
+				println '--------------------'
+				redirect_uri = reader.toString()
+			}
+		}
+		return redirect_uri
+	}
 
-        // perform a POST request, expecting JSON response (redirect url)
-        def http = new HTTPBuilder(kongProxyUrl+submitTo)
-        http.request(Method.POST, ContentType.JSON) {
-            requestContentType = ContentType.URLENC
-            body = [client_id: authRequest.client_id, response_type: authRequest.response_type,
-                    scope: authRequest.scope,provision_key: provisionKey, authenticated_userid:authenticatedUserId ]
-            // response handler for a success response code
-            response.success = { resp, reader ->
-                println "response status: ${resp.statusLine}"
-                println 'Headers: -----------'
-                resp.headers.each { h ->
-                    println " ${h.name} : ${h.value}"
-                }
+	public String authDeny(AuthRequest authRequest) {
+		String clientCallbackUrl = "unknown"; // todo if app not found, show error page
+		RestTemplate restTemplate = new RestTemplate();
+		Map clientInfo = restTemplate.getForObject(kongAdminUrl + "/oauth2?client_id=" + authRequest.client_id, Map.class);
+		if (clientInfo["data"] != null && clientInfo["data"] instanceof List && clientInfo["data"].size() > 0)
+			clientCallbackUrl = (String) clientInfo["data"][0]["redirect_uri"];
 
-                if (reader instanceof Map && reader.containsKey("redirect_uri"))
-                    redirect_uri = reader.get("redirect_uri")
-                else {
-                    println 'Response data: -----'
-                    println reader
-                    println '--------------------'
-                }
-            }
-            response.failure = {resp, reader ->
-                println "ERROR response status: ${resp.statusLine}"
-                println 'Headers: -----------'
-                resp.headers.each { h ->
-                    println " ${h.name} : ${h.value}"
-                }
-                println 'Response data: -----'
-                println reader
-                println '--------------------'
-                redirect_uri = reader.toString()
-            }
-        }
-        return redirect_uri
-    }
+		// todo build redirect url in a smart way (assuming there could be other parameters already)
+		clientCallbackUrl += "/?error=access_denied&error_description=The+user+denied+access+to+your+application";
 
-    public String authDeny(AuthRequest authRequest) {
-        String clientCallbackUrl = "unknown"; // todo if app not found, show error page
-        RestTemplate restTemplate = new RestTemplate();
-        Map clientInfo = restTemplate.getForObject(kongAdminUrl+"/oauth2?client_id="+authRequest.client_id, Map.class);
-        if (clientInfo["data"]!=null && clientInfo["data"] instanceof List && clientInfo["data"].size()>0)
-            clientCallbackUrl = (String) clientInfo["data"][0]["redirect_uri"];
-
-        // todo build redirect url in a smart way (assuming there could be other parameters already)
-        clientCallbackUrl += "/?error=access_denied&error_description=The+user+denied+access+to+your+application";
-
-        return "redirect:"+clientCallbackUrl;
-    }
+		return "redirect:" + clientCallbackUrl;
+	}
 }

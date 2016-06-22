@@ -14,7 +14,7 @@ import org.springframework.web.bind.support.SessionStatus
 class ClientAppControllerExample {
 	// to do take from properties
 	private String kongProxyUrl = "https://proxy.api.dev.auckland.ac.nz/";
-	private String apiAuthPath ="pcfdevo/"
+	private String apiAuthPath ="hello-oauth2/"
 
 	@Value('${lily.authzEndpoint}')
 	private String authzEndpoint
@@ -85,17 +85,23 @@ class ClientAppControllerExample {
 	public String showData(Model model){
 		TokenResponse tokenResponse = model.asMap().get("token") as TokenResponse;
 		if (tokenResponse?.access_token) {
-			String result = queryData(tokenResponse)
-			model.addAttribute("text", result);
-			model.addAttribute("action", "Close");
-			model.addAttribute("nextUrl", "lily/closeSession")
-			return "generic_response"
+			try {
+				String result = queryData(tokenResponse)
+				model.addAttribute("text", result);
+				model.addAttribute("action", "Close");
+				model.addAttribute("nextUrl", "lily/closeSession")
+			}catch (Exception e){
+				e.printStackTrace()
+				model.addAttribute("text", "[ERROR] Unexpected error while querying API - "+e.getMessage())
+				model.addAttribute("action", "Back to start")
+				model.addAttribute("nextUrl", "lily")
+			}
 		}else{
 			model.addAttribute("text", "[ERROR] No token info found in session")
 			model.addAttribute("action", "Back to start")
 			model.addAttribute("nextUrl", "lily")
 		}
-
+		return "generic_response"
 	}
 
 	@ModelAttribute("serverInfo")
@@ -135,6 +141,7 @@ class ClientAppControllerExample {
 				func(resp, reader);
 			}
 			response.success = handler.rcurry({resp, reader->
+				// (new JsonSlurper()).parse(this.parseText(resp));
 				result = reader as TokenResponse
 			})
 			response.failure = handler.rcurry({resp, reader->
@@ -145,16 +152,53 @@ class ClientAppControllerExample {
 	}
 
 	private String queryData(TokenResponse token){
+		//curl -i --url http://localhost:80/hello-oauth2   --header 'Content-Type: application/json'
+
+		String result = "Unexpected failure (catch)"
+		// should work when a correct access_token is being sent in the querystring: access_token = token.access_token)
+		// or in an authorization header (bearer): authorization = "bearer "..token.access_token
+		// or in an authorization header (token): authorization = "token "..token.access_token
+		def http = new HTTPBuilder(kongProxyUrl+apiAuthPath)
+		println "Calling "+kongProxyUrl+apiAuthPath
+		http.request(Method.POST, ContentType.TEXT) {
+			//requestContentType = ContentType.JSON
+			//body = queryData
+			headers = [Authorization: "bearer "+token.access_token]
+			println "Passing toke in header: "+token.access_token
+			def handler = {resp, reader, func ->
+				println "response status: ${resp.statusLine}"
+				println 'Headers: -----------'
+				resp.headers.each { h ->
+					println " ${h.name} : ${h.value}"
+				}
+				println 'Response data: -----'
+				println reader
+				println '--------------------'
+				func(resp, reader);
+			}
+			response.success = handler.rcurry({resp, reader->
+				result = reader.text
+			})
+			response.failure = handler.rcurry({resp, reader->
+				result = reader?.text
+				println result
+			})
+		}
+		return result;
+	}
+
+	@Deprecated
+	private String queryDataOld(TokenResponse token){
 		//curl -i -X POST --url http://localhost:80/pcfdevo   --header 'Content-Type: application/json'
 		// --data '{"query":{"keywords":"museum","filter":"All","undergraduate":true},"nPerPage":8,"page":0}'
 
-		String result
+		String result = "Unexpected failure (catch)"
 		// should work when a correct access_token is being sent in the querystring: access_token = token.access_token)
 		// or in an authorization header (bearer): authorization = "bearer "..token.access_token
 		// or in an authorization header (token): authorization = "token "..token.access_token
 		def queryData = [query: [keywords:"museum", filter:"All", undergraduate: true], nPerPage: 8, page: 0]
 		def http = new HTTPBuilder(kongProxyUrl+apiAuthPath)
-		http.request(Method.POST, ContentType.JSON) {
+		http.request(Method.POST, ContentType.TEXT) {
 			requestContentType = ContentType.JSON
 			body = queryData
 			headers = [Authorization: "bearer "+token.access_token]
@@ -173,9 +217,11 @@ class ClientAppControllerExample {
 				result = reader.toString()
 			})
 			response.failure = handler.rcurry({resp, reader->
-				result = reader.toString()
+				result = reader?.text
+				println result
 			})
 		}
+		return result;
 	}
 
 	public static class ServerInfo {
