@@ -65,11 +65,23 @@
 		<div class="jumbotron">
 			<h2>Authorize application</h2>
 
-			<p class="lead">
+			<p class="lead" style="text-align: left;">
 				<em th:text="${appname}"></em> at <em th:text="${appurl}"></em>
-				would like to have authorization to access your data. You can revoke this access any time from your Application
-				pages.
+				would like to have authorization to access your data. Do you allow?
 			</p>
+
+			<div class="row">
+				<div class="col-lg-10">
+					<div class="checkbox pull-left">
+						<label>
+							<input type="checkbox" value=""/>
+							Remember my decision
+						</label>
+						<span class="glyphicon glyphicon-question-sign" aria-hidden="true"
+						      title="You can revoke this access at any time from your Application pages"></span>
+					</div>
+				</div>
+			</div>
 
 			<div class="row">
 				<div class="col-lg-10">

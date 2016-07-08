@@ -15,21 +15,42 @@ import org.springframework.web.bind.annotation.RequestMethod
 import org.springframework.web.client.RestTemplate
 
 @Controller
-// to do:  add csrf protection to prevent user unknowingly submitting approval by following specially crafted link
+// to do:  add csrf protection to prevent user from unknowingly submitting approval by following specially crafted link
 //         (using POST should prevent it, but its better to have more protection in place)
 // do NOT enable CORS on any of these method
 public class AuthorizationController {
+
+	// options for reponse_type when calling oauth/authorize endpoint
+	public static final String AUTHORIZE_CODE_FLOW = "code"
+	public static final String AUTHORIZE_IMPLICIT_FLOW = "token"
+
 
 	// to do take from properties
 	private String kongAdminUrl = "https://admin.api.dev.auckland.ac.nz/";
 	private String kongProxyUrl = "https://proxy.api.dev.auckland.ac.nz";
 
-	// http://localhost:8090/pcfdev-oauth/auth?client_id=irina_oauth2_pluto&response_type=code&scope=read,write
-	@RequestMapping("/{api_id}/auth")
+
+	@RequestMapping("/{api_id}/oauth2/authorize")
 	public String authForm(@RequestHeader(value = "REMOTE_USER", defaultValue = "NULL") String userId,
+	                       @RequestHeader(value = "HTTP_DISPLAYNAME", defaultValue = "NULL") String userName,
 	                       @PathVariable("api_id") String apiId, AuthRequest authRequest, Model model) {
+
+		return renderAuthForm(userId, userName, apiId, authRequest, model);
+	}
+
+	// http://localhost:8090/pcfdev-oauth/auth?client_id=irina_oauth2_pluto&response_type=code&scope=read,write
+	@Deprecated
+	@RequestMapping("/{api_id}/auth")
+	public String authFormDeprecated(@RequestHeader(value = "REMOTE_USER", defaultValue = "NULL") String userId,
+						   @RequestHeader(value = "HTTP_DISPLAYNAME", defaultValue = "NULL") String userName,
+	                       @PathVariable("api_id") String apiId, AuthRequest authRequest, Model model) {
+		return renderAuthForm(userId, userName, apiId, authRequest, model);
+	}
+
+
+	private String renderAuthForm(String userId, String userName, String apiId, AuthRequest authRequest, Model model){
 		// todo get scopes from request
-		// todo get scopes description from ?
+		// todo get scopes description from ?<TBD>?
 		// todo if userId is NULL, show error (user is not authenticated, SSO failed??)
 		Map<String, String> scopes = new HashMap<>();
 		scopes.put("person-read", "Allows application to read person information on your behalf.");
@@ -38,10 +59,13 @@ public class AuthorizationController {
 
 		// extract data from parameters and pass to the view in hidden fields
 		authRequest.client_id = sanitize(authRequest.client_id) ?: "irina_oauth2_pluto";
-		authRequest.response_type = sanitize(authRequest.response_type) ?: "code";
+		authRequest.response_type = sanitize(authRequest.response_type) ?: AUTHORIZE_CODE_FLOW;
 		authRequest.user_id = userId != "NULL" ? userId : "";
 		model.addAttribute("map", authRequest);
-		model.addAttribute("name", authRequest.user_id ?: "user");
+
+		// greetings
+		String displayName = (userName != "NULL"? userName :  ("Unknown ("+(authRequest.user_id ?: "user")+")"))
+		model.addAttribute("name", displayName);
 
 		// find out application name
 		// call Kong http://localhost:8001/oauth2?client_id=irina_oauth2_pluto
@@ -129,7 +153,8 @@ public class AuthorizationController {
 		http.request(Method.POST, ContentType.JSON) {
 			requestContentType = ContentType.URLENC
 			body = [client_id: authRequest.client_id, response_type: authRequest.response_type,
-			        scope    : authRequest.scope, provision_key: provisionKey, authenticated_userid: authenticatedUserId]
+			        scope    : authRequest.scope, provision_key: provisionKey,
+			        authenticated_userid: authenticatedUserId] // do NOT use authRequest.user_id as it can be spoofed
 			// response handler for a success response code
 			response.success = { resp, reader ->
 				println "response status: ${resp.statusLine}"
