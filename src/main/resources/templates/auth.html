@@ -5,7 +5,7 @@
 	<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
 	<meta name="viewport" content="width=device-width, initial-scale=1"/>
 	<!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
-	<title>University of Auckland Authorization request</title>
+	<title>University of Auckland APIs - Client Authorization request</title>
 
 	<!-- Bootstrap -->
 	<!--link href="css/bootstrap.min.css" rel="stylesheet"-->
@@ -45,34 +45,24 @@
 		</a>
 		<form id='api_selector' style="float:right;">
 			<div class='input' style="margin-top: 35px; float: left; color: #fff;"><span th:text="'Hello, ' + ${name} + '!'"></span></div>
-			<div class='input' style="margin-top: 35px; margin-left: 20px; float: left;"><input placeholder="http://example.com/api" id="input_baseUrl" name="baseUrl" type="text"/></div>
+			<div class='input' style="margin-top: 35px; margin-left: 20px; float: left;"><input placeholder="Authorizing application" id="inputSearchTerm" name="inputSearch" type="text"/></div>
 			<div class='input' style="margin-top: 35px; margin-left: 20px; width: 63px; float:left;" ><input type="button" id="explore" value="Help"/></div>
 		</form>
 	</div>
 </div>
 
 <div class="container">
-
-	<!--div class="header clearfix">
-		<nav>
-			<ul class="nav nav-pills pull-right">
-				<li role="presentation" class="active"><a href="#">Home</a></li>
-				<li role="presentation"><a href="#">About</a></li>
-				<li role="presentation"><a href="#">Contact</a></li>
-			</ul>
-		</nav>
-		<h4 th:text="'Hello, ' + ${name} + '!'" class="text-muted"></h4>
-	</div-->
 	<div class="header"></div>
 	<form action="#" th:action="@{/{apid}/auth/submit(apid=${apiid})}" th:object="${map}" method="post">
 		<input type="hidden" th:field="*{client_id}"/>
 		<input type="hidden" th:field="*{response_type}"/>
-		<div class="jumbotron">
+		<input type="hidden" th:field="*{redirect_uri}"/>
+		<div class="jumbotron" th:switch="${clientError}">
 			<h2>Authorize application</h2>
-
+			<div th:case="false">
 			<p>
 				<em th:text="${appname}"></em> at <em th:text="${appurl}"></em>
-				would like to have authorization to access your data.
+				would like to have authorization to access your data or call services on your behalf.
 			</p>
 			<p>Do you allow?</p>
 
@@ -87,18 +77,22 @@
 			<div>
 				<label>
 					<input type="checkbox" value=""/>
-					Another Irina Checkbox
+					Remember my decision for 1 day
 				</label>
 				<i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
-					  title="This is Irinas special checkbox for not having a radio selection"></i>
+					  title="The app will be able to use this access for 1 day only. You will be prompted again if app needs access after this period."></i>
 			</div>
 
 			<div class="flex-space-between margin-top-m">
 				<span class="btn-group btn-group-lg">
-					<button type="submit" class="btn btn-warning" name="actionDeny">Deny</button>
-					<button type="submit" class="btn" name="actionDebug">Debug</button>
+					<button type="submit" class="btn btn-warning" name="actionDeny" value="Deny" >Deny</button>
+					<button type="submit" class="btn" name="actionDebug" value="Debug" title="Submit approval but dont redirect back, let me see the Kong's response first">Debug</button>
 				</span>
-				<button type="submit" class="btn btn-lg btn-success" name="actionAllow">Allow</button>
+				<button type="submit" class="btn btn-lg btn-success" value="Allow" name="actionAllow">Allow</button>
+			</div>
+			</div>
+			<div th:case="true">
+				<p>Unregistered application sent you to this page. We cant help, please go back.</p>
 			</div>
 		</div>
 
