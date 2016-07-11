@@ -45,7 +45,7 @@
 		</a>
 		<form id='api_selector' style="float:right;">
 			<div class='input' style="margin-top: 35px; float: left; color: #fff;"><span th:text="'Hello, ' + ${name} + '!'"></span></div>
-			<div class='input' style="margin-top: 35px; margin-left: 20px; float: left;"><input placeholder="http://example.com/api" id="input_baseUrl" name="baseUrl" type="text"/></div>
+			<div class='input' style="margin-top: 35px; margin-left: 20px; float: left;"><input placeholder="Authorizing application" id="inputSearchTerm" name="inputSearch" type="text"/></div>
 			<div class='input' style="margin-top: 35px; margin-left: 20px; width: 63px; float:left;" ><input type="button" id="explore" value="Help"/></div>
 		</form>
 	</div>
@@ -57,12 +57,12 @@
 		<input type="hidden" th:field="*{client_id}"/>
 		<input type="hidden" th:field="*{response_type}"/>
 		<input type="hidden" th:field="*{redirect_uri}"/>
-		<div class="jumbotron">
+		<div class="jumbotron" th:switch="${clientError}">
 			<h2>Authorize application</h2>
-
+			<div th:case="false">
 			<p>
 				<em th:text="${appname}"></em> at <em th:text="${appurl}"></em>
-				would like to have authorization to access your data.
+				would like to have authorization to access your data or call services on your behalf.
 			</p>
 			<p>Do you allow?</p>
 
@@ -89,6 +89,10 @@
 					<button type="submit" class="btn" name="actionDebug" value="Debug" title="Submit approval but dont redirect back, let me see the Kong's response first">Debug</button>
 				</span>
 				<button type="submit" class="btn btn-lg btn-success" value="Allow" name="actionAllow">Allow</button>
+			</div>
+			</div>
+			<div th:case="true">
+				<p>Unregistered application sent you to this page. We cant help, please go back.</p>
 			</div>
 		</div>
 

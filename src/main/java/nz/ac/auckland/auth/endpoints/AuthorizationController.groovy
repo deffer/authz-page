@@ -85,8 +85,9 @@ public class AuthorizationController {
 
 			if (!authRequest.redirect_uri)
 				authRequest.redirect_uri = callbackFromKong
+			model.addAttribute("clientError", !callbackFromKong)
 		}else{
-			//
+			model.addAttribute("clientError", true)
 		}
 
 		URI uri = new URI(clientCallbackUrl)
