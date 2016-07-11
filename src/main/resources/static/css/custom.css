@@ -1,0 +1,21 @@
+.container {
+    max-width: 730px;
+    margin-top: 48px;
+}
+
+.footer {
+    margin-top: 24px;
+    padding-top: 24px;
+    color: #777;
+    border-top: 1px solid #e5e5e5;
+}
+
+.margin-top-m {
+    margin-top: 16px;
+}
+
+.flex-space-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
