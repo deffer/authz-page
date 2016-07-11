@@ -53,8 +53,9 @@ public class AuthorizationController {
 		// todo get scopes description from ?<TBD>?
 		// todo if userId is NULL, show error (user is not authenticated, SSO failed??)
 		Map<String, String> scopes = new HashMap<>();
-		scopes.put("person-read", "Allows application to read person information on your behalf.");
-		scopes.put("person-write", "Allows application to update person information on your behalf. Your current role-based authorization will apply.");
+		scopes.put("person-read", "Allows application to read person information on your behalf. This is just an example scope to test the layout of the displayed page, please ignore it.");
+		scopes.put("person-write", "Allows application to update person information on your behalf. Your current role-based privileges will apply. This is just an example scope to test the layout of the displayed page, please ignore it.");
+		scopes.put("enrollment-read", "Allows application to read student enrollments on your behalf. Your current role-based privileges will apply. This is just an example scope to test the layout of the displayed page, please ignore it.");
 		model.addAttribute("scopes", scopes); // to do scopes description
 
 		// extract data from parameters and pass to the view in hidden fields
@@ -62,6 +63,7 @@ public class AuthorizationController {
 		authRequest.response_type = sanitize(authRequest.response_type) ?: AUTHORIZE_CODE_FLOW;
 		authRequest.user_id = userId != "NULL" ? userId : "";
 		model.addAttribute("map", authRequest);
+
 
 		// greetings
 		String displayName = (userName != "NULL"? userName :  ("Unknown ("+(authRequest.user_id ?: "user")+")"))
@@ -80,6 +82,11 @@ public class AuthorizationController {
 				clientCallbackUrl = (String) callbackFromKong[0];
 			else
 				clientCallbackUrl = (String) callbackFromKong;
+
+			if (!authRequest.redirect_uri)
+				authRequest.redirect_uri = callbackFromKong
+		}else{
+			//
 		}
 
 		URI uri = new URI(clientCallbackUrl)
@@ -131,8 +138,12 @@ public class AuthorizationController {
 			model.addAttribute("kongResponse", kongResponse);
 
 			return "temp";
-		} else
-			return "redirect:" + kongResponse
+		} else {
+			if (!kongResponse.contains("error") && authRequest.response_type?.equals(AUTHORIZE_IMPLICIT_FLOW)){
+				return "redirect:" + kongResponse.replace("?","#")
+			}else
+				return "redirect:" + kongResponse
+		}
 	}
 
 	private String submitAuthorization(String authenticatedUserId, String submitTo, String provisionKey,

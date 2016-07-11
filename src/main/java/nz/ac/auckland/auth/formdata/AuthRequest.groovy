@@ -9,6 +9,7 @@ public class AuthRequest {
 	String client_id;
 	String response_type;
 	String scope;
+	String redirect_uri;
 
 	// temporarily using these flags as indicators of what button was pressed
 	String actionAllow = null;
