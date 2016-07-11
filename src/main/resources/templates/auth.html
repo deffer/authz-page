@@ -18,13 +18,16 @@
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css"
 	      integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous"/>
 
+	<script src="https://code.jquery.com/jquery-2.2.4.min.js"
+			integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
+			crossorigin="anonymous"></script>
 	<!-- Latest compiled and minified JavaScript -->
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"
 	        integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS"
 	        crossorigin="anonymous"></script>
 
 	<!-- Custom styles for this template -->
-	<link href="../../css/jumbotron-narrow.css" rel="stylesheet"/>
+	<link href="../../css/custom.css" rel="stylesheet"/>
 
 	<!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
 	<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -62,53 +65,57 @@
 	</div-->
 	<div class="header"></div>
 	<form action="#" th:action="@{/{apid}/auth/submit(apid=${apiid})}" th:object="${map}" method="post">
+		<input type="hidden" th:field="*{client_id}"/>
+		<input type="hidden" th:field="*{response_type}"/>
 		<div class="jumbotron">
 			<h2>Authorize application</h2>
 
-			<p class="lead" style="text-align: left;">
+			<p>
 				<em th:text="${appname}"></em> at <em th:text="${appurl}"></em>
-				would like to have authorization to access your data. Do you allow?
+				would like to have authorization to access your data.
 			</p>
+			<p>Do you allow?</p>
 
-			<div class="row">
-				<div class="col-lg-10">
-					<div class="checkbox pull-left">
-						<label>
-							<input type="checkbox" value=""/>
-							Remember my decision
-						</label>
-						<span class="glyphicon glyphicon-question-sign" aria-hidden="true"
-						      title="You can revoke this access at any time from your Application pages"></span>
-					</div>
-				</div>
+			<div>
+				<label>
+					<input type="checkbox" value=""/>
+					Remember my decision
+				</label>
+				<i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
+					  title="You can revoke this access at any time from your Application pages"></i>
+			</div>
+			<div>
+				<label>
+					<input type="checkbox" value=""/>
+					Another Irina Checkbox
+				</label>
+				<i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
+					  title="This is Irinas special checkbox for not having a radio selection"></i>
 			</div>
 
-			<div class="row">
-				<div class="col-lg-10">
-					<input type="hidden" th:field="*{client_id}"/>
-					<input type="hidden" th:field="*{response_type}"/>
-				</div>
-			</div>
-
-			<div class="row">
-				<!--a class="btn btn-lg btn-success" href="#" role="button">Allow</a-->
-				<input type="submit" class="btn-small btn-success" role="button" value="Allow" name="actionAllow"/>
-				<input type="submit" class="btn-small btn-danger" role="button" value="Deny" name="actionDeny"/>
-				<input type="submit" class="btn-small" role="button" value="Debug" name="actionDebug"/>
+			<div class="flex-space-between margin-top-m">
+				<span class="btn-group btn-group-lg">
+					<button type="submit" class="btn btn-warning" name="actionDeny">Deny</button>
+					<button type="submit" class="btn" name="actionDebug">Debug</button>
+				</span>
+				<button type="submit" class="btn btn-lg btn-success" name="actionAllow">Allow</button>
 			</div>
 		</div>
 
 		<div class="row marketing">
-			<h3>Requested scopes and their description</h3>
-
-			<div th:each="scopes: ${scopes}" class="col-lg-6">
+			<div class="col-sm-12">
+				<h3>Requested scopes and their description</h3>
+			</div>
+		</div>
+		<div class="row">
+			<div th:each="scopes: ${scopes}" class="col-sm-6">
 				<h4 th:text="${scopes.key}"></h4>
 
 				<p th:text="${scopes.value}"></p>
 			</div>
 		</div>
 
-		<div class="row">
+		<div class="row margin-top-m">
 			<div class="col-lg-10">
 				Overwrite your upi (DEBUG): <input type="text" th:field="*{user_id}"/>
 			</div>
@@ -125,5 +132,10 @@
 
 <!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
 <!--script src="../../assets/js/ie10-viewport-bug-workaround.js"></script-->
+<script type="text/javascript">
+	$(function () {
+		$('[data-toggle="tooltip"]').tooltip();
+	});
+</script>
 </body>
 </html>
