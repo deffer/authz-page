@@ -14,8 +14,8 @@
     margin-top: 32px;
 }
 
-.no-margin-bottom {
-    margin-bottom: 0;
+.margin-bottom-s {
+    margin-bottom: 8px !important;
 }
 
 .flex-space-between {

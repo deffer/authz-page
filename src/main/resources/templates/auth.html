@@ -66,24 +66,27 @@
 				</p>
 				<p>Do you allow?</p>
 
-				<p class="no-margin-bottom">Remember this decision:</p>
-				<div>
+				<div class="well">
+					<p class="margin-bottom-s">Remember this decision:</p>
 					<div>
 						<label for="remember-forever">
 							<input type="radio" name="remember" id="remember-forever" value="until-revoked" checked="checked"/>
-							remember this decision until I revoke it
+							remember this decision until I revoke it <i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
+																		title="You can revoke this access at any time from your Application pages"></i>
 						</label>
 					</div>
 					<div>
 						<label for="remember-hour">
 							<input type="radio" name="remember" id="remember-hour" value="one-hour"/>
-							remember this decision for one hour
+							remember this decision for one hour <i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
+																   title="The app will be able to use this access for 1 day only. You will be prompted again if app needs access after this period."></i>
 						</label>
 					</div>
 					<div>
 						<label for="remember-not">
 							<input type="radio" name="remember" id="remember-not" value="none"/>
-							prompt me again next time
+							prompt me again next time <i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
+														 title="You will be prompted again if app needs access."></i>
 						</label>
 					</div>
 				</div>
