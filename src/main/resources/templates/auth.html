@@ -60,36 +60,41 @@
 		<div class="jumbotron" th:switch="${clientError}">
 			<h2>Authorize application</h2>
 			<div th:case="false">
-			<p>
-				<em th:text="${appname}"></em> at <em th:text="${appurl}"></em>
-				would like to have authorization to access your data or call services on your behalf.
-			</p>
-			<p>Do you allow?</p>
+				<p>
+					<em th:text="${appname}"></em> at <em th:text="${appurl}"></em>
+					would like to have authorization to access your data or call services on your behalf.
+				</p>
+				<p>Do you allow?</p>
 
-			<div>
-				<label>
-					<input type="checkbox" value=""/>
-					Remember my decision
-				</label>
-				<i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
-					  title="You can revoke this access at any time from your Application pages"></i>
-			</div>
-			<div>
-				<label>
-					<input type="checkbox" value=""/>
-					Remember my decision for 1 day
-				</label>
-				<i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
-					  title="The app will be able to use this access for 1 day only. You will be prompted again if app needs access after this period."></i>
-			</div>
+				<p class="no-margin-bottom">Remember this decision:</p>
+				<div>
+					<div>
+						<label for="remember-forever">
+							<input type="radio" name="remember" id="remember-forever" value="until-revoked" checked="checked"/>
+							remember this decision until I revoke it
+						</label>
+					</div>
+					<div>
+						<label for="remember-hour">
+							<input type="radio" name="remember" id="remember-hour" value="one-hour"/>
+							remember this decision for one hour
+						</label>
+					</div>
+					<div>
+						<label for="remember-not">
+							<input type="radio" name="remember" id="remember-not" value="none"/>
+							prompt me again next time
+						</label>
+					</div>
+				</div>
 
-			<div class="flex-space-between margin-top-m">
-				<span class="btn-group btn-group-lg">
-					<button type="submit" class="btn btn-warning" name="actionDeny" value="Deny" >Deny</button>
-					<button type="submit" class="btn" name="actionDebug" value="Debug" title="Submit approval but dont redirect back, let me see the Kong's response first">Debug</button>
-				</span>
-				<button type="submit" class="btn btn-lg btn-success" value="Allow" name="actionAllow">Allow</button>
-			</div>
+				<div class="flex-space-between margin-top-l">
+					<span class="btn-group btn-group-lg">
+						<button type="submit" class="btn btn-warning" name="actionDeny" value="Deny" >Deny</button>
+						<button type="submit" class="btn" name="actionDebug" value="Debug" title="Submit approval but dont redirect back, let me see the Kong's response first">Debug</button>
+					</span>
+					<button type="submit" class="btn btn-lg btn-success" value="Allow" name="actionAllow">Allow</button>
+				</div>
 			</div>
 			<div th:case="true">
 				<p>Unregistered application sent you to this page. We cant help, please go back.</p>
