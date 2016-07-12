@@ -61,35 +61,41 @@
 			<h2>Authorize application</h2>
 			<div th:case="false">
 				<p>
-					<em th:text="${appname}"></em> at <em th:text="${appurl}"></em>
+					<span class="texthighlight" th:text="${appname}"></span>
 					would like to have authorization to access your data or call services on your behalf.
+					Do you allow? You will be redirected to <span class="urlhighlight" th:text="${appurl}"></span>
 				</p>
-				<p>Do you allow?</p>
 
-				<div class="well">
-					<p class="margin-bottom-s">Remember this decision:</p>
-					<div>
-						<label for="remember-forever">
-							<input type="radio" name="remember" id="remember-forever" value="until-revoked" checked="checked"/>
-							remember this decision until I revoke it <i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
-																		title="You can revoke this access at any time from your Application pages"></i>
-						</label>
-					</div>
-					<div>
-						<label for="remember-hour">
-							<input type="radio" name="remember" id="remember-hour" value="one-hour"/>
-							remember this decision for one hour <i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
-																   title="The app will be able to use this access for 1 day only. You will be prompted again if app needs access after this period."></i>
-						</label>
-					</div>
-					<div>
-						<label for="remember-not">
-							<input type="radio" name="remember" id="remember-not" value="none"/>
-							prompt me again next time <i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
-														 title="You will be prompted again if app needs access."></i>
-						</label>
+				<div class="row">
+					<div class="well col-xs-8">
+						<p class="margin-bottom-s">Remember this decision:</p>
+						<div>
+							<label for="remember-forever">
+								<input type="radio" name="remember" id="remember-forever" value="until-revoked" checked="checked"/>
+								remember this decision until I revoke it
+								<i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
+								   title="You can revoke this access at any time from your Application pages"></i>
+							</label>
+						</div>
+						<div>
+							<label for="remember-day">
+								<input type="radio" name="remember" id="remember-day" value="one-hour"/>
+								remember this decision for one day
+								<i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
+								   title="The app will be able to use this access for 1 day only. You will be prompted again if app needs access after this period."></i>
+							</label>
+						</div>
+						<div>
+							<label for="remember-not">
+								<input type="radio" name="remember" id="remember-not" value="none"/>
+								prompt me again next time
+								<i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
+								   title="You will be prompted again if app needs access."></i>
+							</label>
+						</div>
 					</div>
 				</div>
+
 
 				<div class="flex-space-between margin-top-l">
 					<span class="btn-group btn-group-lg">

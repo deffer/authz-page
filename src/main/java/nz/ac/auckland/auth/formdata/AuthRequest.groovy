@@ -6,6 +6,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class AuthRequest {
 
+	public static final String REMEMBER_NOT = "remember-not"
+	public static final String REMEMBER_FOREVER = "remember-forever"
+	public static final String REMEMBER_DAY = "remember-day"
+
 	String client_id;
 	String response_type;
 	String scope;
@@ -15,6 +19,7 @@ public class AuthRequest {
 	String actionAllow = null;
 	String actionDeny = null;
 	String actionDebug = null;
+	String remember = REMEMBER_FOREVER;
 
 	String user_id; // temp, for debug
 
