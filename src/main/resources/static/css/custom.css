@@ -10,8 +10,12 @@
     border-top: 1px solid #e5e5e5;
 }
 
-.margin-top-m {
-    margin-top: 16px;
+.margin-top-l {
+    margin-top: 32px;
+}
+
+.no-margin-bottom {
+    margin-bottom: 0;
 }
 
 .flex-space-between {
