@@ -59,14 +59,19 @@
 		<input type="hidden" th:field="*{redirect_uri}"/>
 		<div class="jumbotron" th:switch="${clientError}">
 			<h2>Authorize application</h2>
-			<div th:case="false">
+			<div th:case="${null}">
 				<p>
 					<span class="texthighlight" th:text="${appname}"></span>
 					would like to have authorization to access your data or call services on your behalf.
 					Do you allow? You will be redirected to <span class="urlhighlight" th:text="${appurl}"></span>
 				</p>
 
-				<div class="row">
+				<div class="alert alert-warning" role="alert" th:if="${! #strings.isEmpty(clientWarning)}">
+					This application was registered with a different callback <span class="urlhighlight" th:text="${clientWarning}"></span>.
+					Do not accept his request if you dont trust application which sent you here.
+				</div>
+
+				<div th:unless="${! #strings.isEmpty(clientWarning)}" class="row">
 					<div class="well col-xs-8">
 						<p class="margin-bottom-s">Remember this decision:</p>
 						<div>
@@ -105,8 +110,16 @@
 					<button type="submit" class="btn btn-lg btn-success" value="Allow" name="actionAllow">Allow</button>
 				</div>
 			</div>
-			<div th:case="true">
-				<p>Unregistered application sent you to this page. We cant help, please go back.</p>
+			<div th:case="unknown_client">
+				<p>Some unregistered application sent you to this page. We cant help, please go back.</p>
+			</div>
+			<div th:case="callback_match">
+				<p>Unable to verify identity of the calling application - mismatched callback url. We blocked this request to keep you safe.
+				</p>
+				<div class="alert alert-danger" role="alert">
+					Application <span class="texthighlight" th:text="${appname}"></span>
+					is registered as <span class="urlhighlight" th:text="${clientWarning}"></span>
+				</div>
 			</div>
 		</div>
 
