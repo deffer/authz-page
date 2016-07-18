@@ -86,23 +86,6 @@ public class AuthorizationController {
 			model.addAttribute("clientError", "unknown_client")
 		}
 
-		/*if (clientInfo["data"] != null && clientInfo["data"] instanceof List && clientInfo["data"].size() > 0) {
-			appName = (String) clientInfo["data"][0]["name"];
-			def callbackFromKong = clientInfo["data"][0]["redirect_uri"];
-			// was string, now its an array since Kong > 0.6
-			if (callbackFromKong != null && !(callbackFromKong instanceof String))
-				clientCallbackUrl = (String) callbackFromKong[0];
-			else
-				clientCallbackUrl = (String) callbackFromKong;
-
-			if (!authRequest.redirect_uri)
-				authRequest.redirect_uri = callbackFromKong
-			model.addAttribute("clientError", !callbackFromKong)
-		}else{
-			model.addAttribute("clientError", "unknown_client")
-		}*/
-
-
 		return "auth";
 	}
 
@@ -130,23 +113,44 @@ public class AuthorizationController {
 		if (authRequest.actionDeny)
 			return authDeny(authRequest);
 
+		// todo state
+
 		// fetch api url and oauth2 provision key for given api
 		String provisionKey = null;
 		RestTemplate rest = new RestTemplate();
 		ApiInfo apiInfo = rest.getForObject(kongAdminUrl + "/apis/" + apiId, ApiInfo.class);
 		Map pluginInfo = rest.getForObject(kongAdminUrl + "/apis/" + apiId + "/plugins", Map.class);
-		pluginInfo.data.each { plugin ->
+		pluginInfo?.data?.each { plugin ->
 			if (plugin.name == "oauth2")
 				provisionKey = plugin.config.provision_key;
 		}
+		ClientInfo clientInfo = getClientInfo(authRequest)
 
-		// todo if api (or provision key) not found, show error page
+		if ( (!clientInfo) || (!apiInfo) || !(provisionKey)){
+			// todo show error page
+			println("Not found: clientInfo="+clientInfo?.toString()+"  apiInfo="+apiInfo?.toString()+"  provisionKey="+provisionKey)
+			model.addAttribute("user_id", userId);
+			model.addAttribute("map", authRequest);
+			model.addAttribute("provision_key", provisionKey);
+			return "temp";
+		}
+
+		// if redirectUri is overridden and it is allowed, set it here
+		String redirectUri = authRequest.redirect_uri
+		if (authRequest.redirect_uri != clientInfo.redirectUri && !clientInfo.groups.contains(KongContract.GROUP_DYNAMIC_CLIENT)){
+			// todo show error page
+			println("Mismatched callback uri: passed '${authRequest.redirect_uri}' expected '${clientInfo.redirectUri}'")
+			model.addAttribute("user_id", userId);
+			model.addAttribute("map", authRequest);
+			model.addAttribute("provision_key", provisionKey);
+			return "temp";
+		}
 
 		// now we need to inform Kong that user authenticatedUserId grants authorization to application cliend_id
 		String submitTo = apiInfo.request_path + "/oauth2/authorize"
 
 		// todo if result is not response_uri, then show error page
-		String kongResponse = submitAuthorization(userId, submitTo, provisionKey, authRequest);
+		String kongResponse = submitAuthorization(userId, redirectUri, submitTo, provisionKey, authRequest);
 
 		if (authRequest.actionDebug || !(kongResponse)) {
 			model.addAttribute("user_id", userId);
@@ -157,15 +161,38 @@ public class AuthorizationController {
 
 			return "temp";
 		} else {
-			if (!kongResponse.contains("error") && authRequest.response_type?.equals(AUTHORIZE_IMPLICIT_FLOW)){
-				return "redirect:" + kongResponse.replace("?","#")
-			}else
-				return "redirect:" + kongResponse
+			if (kongResponse.contains("error")) // todo parse actual response and detect whether there is an error
+				return "redirect:"+kongResponse
+
+			if (authRequest.redirect_uri != clientInfo.redirectUri){
+				URI uri = new URI(kongResponse)
+				kongResponse = authRequest.redirect_uri+"?"+uri.query
+			}
+
+			if (authRequest.use_fragment || (authRequest.response_type?.equals(AUTHORIZE_IMPLICIT_FLOW) && clientInfo.groups.contains(KongContract.GROUP_HASH_CLIENT)))
+				kongResponse = kongResponse.replace("?","#")
+
+			return "redirect:" + kongResponse
+
 		}
 	}
 
-	private String submitAuthorization(String authenticatedUserId, String submitTo, String provisionKey,
-	                                   AuthRequest authRequest) {
+
+	// common closure to print http response
+	def printResponse = {resp, reader ->
+		println "ERROR response status: ${resp.statusLine}"
+		println 'Headers: -----------'
+		resp.headers.each { h ->
+			println " ${h.name} : ${h.value}"
+		}
+		println 'Response data: -----'
+		println reader
+		println '--------------------'
+	}
+
+
+	private String submitAuthorization(String authenticatedUserId, String redirectUri,
+	                                   String submitTo, String provisionKey, AuthRequest authRequest) {
 		/*$ curl https://your.api.com/oauth2/authorize \
 			--header "Authorization: Basic czZCaGRSa3F0MzpnWDFmQmF0M2JW" \
 			--data "client_id=XXX" \
@@ -184,31 +211,17 @@ public class AuthorizationController {
 			body = [client_id: authRequest.client_id, response_type: authRequest.response_type,
 			        scope    : authRequest.scope, provision_key: provisionKey,
 			        authenticated_userid: authenticatedUserId] // do NOT use authRequest.user_id as it can be spoofed
+
 			// response handler for a success response code
 			response.success = { resp, reader ->
-				println "response status: ${resp.statusLine}"
-				println 'Headers: -----------'
-				resp.headers.each { h ->
-					println " ${h.name} : ${h.value}"
-				}
-
 				if (reader instanceof Map && reader.containsKey("redirect_uri"))
 					redirect_uri = reader.get("redirect_uri")
-				else {
-					println 'Response data: -----'
-					println reader
-					println '--------------------'
-				}
+				else
+					printResponse(resp, reader)
+
 			}
 			response.failure = { resp, reader ->
-				println "ERROR response status: ${resp.statusLine}"
-				println 'Headers: -----------'
-				resp.headers.each { h ->
-					println " ${h.name} : ${h.value}"
-				}
-				println 'Response data: -----'
-				println reader
-				println '--------------------'
+				printResponse(resp, reader)
 				redirect_uri = reader.toString()
 			}
 		}
@@ -251,4 +264,6 @@ public class AuthorizationController {
 		model.addAttribute("scopes", scopes); // to do scopes description
 		return true
 	}
+
+
 }

@@ -18,6 +18,7 @@ public class AuthRequest {
 	String scope;
 	String redirect_uri;
 	String state;
+
 	// may be set by client to indicate that they want response code/token
 	//  to be passed to their callback as a url-fragment instead of parameter
 	String use_fragment;
