@@ -54,9 +54,12 @@
 <div class="container">
 	<div class="header"></div>
 	<form action="#" th:action="@{/{apid}/auth/submit(apid=${apiid})}" th:object="${map}" method="post">
+		<!-- original request parameters, to pass on Submit -->
 		<input type="hidden" th:field="*{client_id}"/>
 		<input type="hidden" th:field="*{response_type}"/>
 		<input type="hidden" th:field="*{redirect_uri}"/>
+		<input type="hidden" th:field="*{state}"/>
+		<input type="hidden" th:field="*{use_fragment}"/>
 		<div class="jumbotron" th:switch="${clientError}">
 			<h2>Authorize application</h2>
 			<div th:case="${null}">
@@ -110,6 +113,13 @@
 					<button type="submit" class="btn btn-lg btn-success" value="Allow" name="actionAllow">Allow</button>
 				</div>
 			</div>
+			<div th:case="noauth_api">
+				<p>Requested API access (OAuth2) is not supported with this API. The client application you are using is probably outdated.
+					BACK.</p>
+			</div>
+			<div th:case="unknown_api">
+				<p>This is a request for unknown API. The link is broken or API was decommissioned. We cant help, please go back.</p>
+			</div>
 			<div th:case="unknown_client">
 				<p>Some unregistered application sent you to this page. We cant help, please go back.</p>
 			</div>
@@ -119,6 +129,7 @@
 				<div class="alert alert-danger" role="alert">
 					Application <span class="texthighlight" th:text="${appname}"></span>
 					is registered as <span class="urlhighlight" th:text="${clientWarning}"></span>
+					while current request wants to take you to <span class="urlhighlight" th:text="${appurl}"></span>
 				</div>
 			</div>
 		</div>

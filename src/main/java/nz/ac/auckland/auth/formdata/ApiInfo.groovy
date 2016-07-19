@@ -1,6 +1,6 @@
 package nz.ac.auckland.auth.formdata
 
-// not used. just a demonstration of how is API info returned by Kong
+// API info returned by Kong
 class ApiInfo {
 	// this is what is returned by making a call to http://localhost:8001/apis/pcfdev-oauth
 	/*
@@ -18,6 +18,9 @@ class ApiInfo {
 	String strip_request_path
 	String name
 	String created_at
+
+	// will be populated after a call to oauth2 plugin
+	String provisionKey
 
 	// plugin info can be retrieved by calling http://localhost:8001/apis/pcfdev-oauth/plugins
 	// and the result would be

@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod
 import org.springframework.web.client.RestTemplate
+import sun.org.mozilla.javascript.internal.EcmaError
 
 @Controller
 // to do:  add csrf protection to prevent user from unknowingly submitting approval by following specially crafted link
@@ -48,7 +49,7 @@ public class AuthorizationController {
 	@Deprecated
 	@RequestMapping("/{api_id}/auth")
 	public String authFormDeprecated(@RequestHeader(value = "REMOTE_USER", defaultValue = "NULL") String userId,
-						   @RequestHeader(value = "HTTP_DISPLAYNAME", defaultValue = "NULL") String userName,
+						   @RequestHeader(value = "displayName", defaultValue = "NULL") String userName,
 	                       @PathVariable("api_id") String apiId, AuthRequest authRequest, Model model) {
 		return renderAuthForm(userId, userName, apiId, authRequest, model);
 	}
@@ -56,19 +57,37 @@ public class AuthorizationController {
 
 	private String renderAuthForm(String userId, String userName, String apiId, AuthRequest authRequest, Model model){
 
-		sanitizeRequestParameters(authRequest, userId)
+		if (!sanitizeRequestParameters(authRequest, userId, model))
+			return "generic_response" // todo show ERROR page
 
 		// pass request input values to the view in hidden fields
 		model.addAttribute("map", authRequest);
 		processScopes(authRequest, model)
 
 		// defined greetings value
-		String displayName = (userName != "NULL"? userName :  ("Unknown ("+(authRequest.user_id ?: "user")+")"))
+		String displayName = userName != "NULL"? userName :  "Unknown (${authRequest.user_id})"
 		model.addAttribute("name", displayName);
+
+		ApiInfo apiInfo = getApiInfo(apiId)
+		if (!apiInfo){
+			model.addAttribute("clientError", "unknown_api")
+			return "auth";
+		}
+
+		if (!(apiInfo.provisionKey)){
+			model.addAttribute("clientError", "noauth_api")
+			return "auth";
+		}
 
 		// find out application and consumer details
 		ClientInfo clientInfo = getClientInfo(authRequest)
 		if (clientInfo){
+			if (clientInfo.groups.contains(KongContract.GROUP_AUTH_GRANTED) && authRequest.response_type==AUTHORIZE_IMPLICIT_FLOW){
+				// that's our internal university client application. we trust it and so does the user.
+				String kongResponse = submitAuthorization(userId, clientInfo.redirectUri, apiInfo.request_path + "/oauth2/authorize", apiInfo.provisionKey, authRequest);
+				return makeCallback(kongResponse, authRequest, clientInfo, model, null) // do NOT override callbackUri, huge security risk
+			}
+
 			if ( (!authRequest.redirect_uri) || authRequest.redirect_uri==clientInfo.redirectUri)
 				authRequest.redirect_uri = clientInfo.redirectUri
 			else {
@@ -90,11 +109,20 @@ public class AuthorizationController {
 	}
 
 
-	boolean sanitizeRequestParameters(AuthRequest authRequest, String userId) {
+	boolean sanitizeRequestParameters(AuthRequest authRequest, String userId, Model model) {
 		// todo if userId is NULL, show error (user is not authenticated, SSO failed??)
 		authRequest.client_id = sanitize(authRequest.client_id) ?: "irina_oauth2_pluto";
 		authRequest.response_type = sanitize(authRequest.response_type) ?: AUTHORIZE_CODE_FLOW;
-		authRequest.user_id = userId != "NULL" ? userId : "";
+		if ((!userId) || userId=="NULL"){
+			if (!debug){
+				model.addAttribute("Unexpected error (SSO fail)")
+				return false
+			}else {
+				authRequest.user_id = "user";
+				return true
+			}
+		}else
+			authRequest.user_id = userId
 		return true
 	}
 
@@ -111,27 +139,18 @@ public class AuthorizationController {
 	                         @PathVariable("api_id") String apiId, AuthRequest authRequest, Model model) {
 		// temporarily using "actionXXX" param to route requests to allow,deny or debug
 		if (authRequest.actionDeny)
-			return authDeny(authRequest);
-
-		// todo state
+			return authDeny(authRequest, model);
 
 		// fetch api url and oauth2 provision key for given api
-		String provisionKey = null;
-		RestTemplate rest = new RestTemplate();
-		ApiInfo apiInfo = rest.getForObject(kongAdminUrl + "/apis/" + apiId, ApiInfo.class);
-		Map pluginInfo = rest.getForObject(kongAdminUrl + "/apis/" + apiId + "/plugins", Map.class);
-		pluginInfo?.data?.each { plugin ->
-			if (plugin.name == "oauth2")
-				provisionKey = plugin.config.provision_key;
-		}
+		ApiInfo apiInfo = getApiInfo(apiId);
 		ClientInfo clientInfo = getClientInfo(authRequest)
 
-		if ( (!clientInfo) || (!apiInfo) || !(provisionKey)){
+		if ( (!clientInfo) || (!apiInfo) || !(apiInfo.provisionKey)){
 			// todo show error page
-			println("Not found: clientInfo="+clientInfo?.toString()+"  apiInfo="+apiInfo?.toString()+"  provisionKey="+provisionKey)
+			println("Not found: clientInfo="+clientInfo?.toString()+"  apiInfo="+apiInfo?.toString()+"  provisionKey="+apiInfo?.provisionKey)
 			model.addAttribute("user_id", userId);
 			model.addAttribute("map", authRequest);
-			model.addAttribute("provision_key", provisionKey);
+			model.addAttribute("provision_key", apiInfo?.provisionKey);
 			return "temp";
 		}
 
@@ -142,41 +161,60 @@ public class AuthorizationController {
 			println("Mismatched callback uri: passed '${authRequest.redirect_uri}' expected '${clientInfo.redirectUri}'")
 			model.addAttribute("user_id", userId);
 			model.addAttribute("map", authRequest);
-			model.addAttribute("provision_key", provisionKey);
+			model.addAttribute("provision_key", apiInfo.provisionKey);
 			return "temp";
 		}
 
 		// now we need to inform Kong that user authenticatedUserId grants authorization to application cliend_id
 		String submitTo = apiInfo.request_path + "/oauth2/authorize"
-
-		// todo if result is not response_uri, then show error page
-		String kongResponse = submitAuthorization(userId, redirectUri, submitTo, provisionKey, authRequest);
+		String kongResponse = submitAuthorization(userId, redirectUri, submitTo, apiInfo.provisionKey, authRequest);
 
 		if (authRequest.actionDebug || !(kongResponse)) {
 			model.addAttribute("user_id", userId);
 			model.addAttribute("map", authRequest);
-			model.addAttribute("provision_key", provisionKey);
+			model.addAttribute("provision_key", apiInfo.provisionKey);
 			model.addAttribute("submitTo", kongProxyUrl + submitTo);
 			model.addAttribute("kongResponse", kongResponse);
 
 			return "temp";
 		} else {
-			if (kongResponse.contains("error")) // todo parse actual response and detect whether there is an error
-				return "redirect:"+kongResponse
-
-			if (authRequest.redirect_uri != clientInfo.redirectUri){
-				URI uri = new URI(kongResponse)
-				kongResponse = authRequest.redirect_uri+"?"+uri.query
-			}
-
-			if (authRequest.use_fragment || (authRequest.response_type?.equals(AUTHORIZE_IMPLICIT_FLOW) && clientInfo.groups.contains(KongContract.GROUP_HASH_CLIENT)))
-				kongResponse = kongResponse.replace("?","#")
-
-			return "redirect:" + kongResponse
-
+			String overrideCallback = authRequest.redirect_uri != clientInfo.redirectUri? authRequest.redirect_uri:null;
+			return makeCallback(kongResponse, authRequest, clientInfo, model, overrideCallback)
 		}
 	}
 
+	private String makeCallback(String kongResponse, AuthRequest authRequest, ClientInfo clientInfo, Model model, String overrideCallback){
+		if (!kongResponse){
+			model.addAttribute("text", "Unexpected error (kong response has no redirect)")
+			return "generic_response" // todo show ERROR page
+		}
+		URI uri = new URI(kongResponse)
+		Map<String, String> params = splitQuery(uri.query)
+
+		// add state parameter if requested
+		if (authRequest.state && !params.containsKey("state")) {
+			String newQuery = "state=${authRequest.state}"
+			if (uri.query)
+				newQuery = uri.query + "&" + newQuery;
+
+			URI newUri = new URI(uri.getScheme(), uri.getAuthority(),
+					uri.getPath(), newQuery, uri.getFragment());
+
+			kongResponse = newUri.toString()
+			uri = newUri
+		}
+
+		if (!params.containsKey("error")) {
+			if (overrideCallback)
+				kongResponse = overrideCallback + "?" + uri.query
+
+			// assumes that neither overrideCallback nor registered callback would have a '#' in them
+			if (authRequest.use_fragment || (authRequest.response_type?.equals(AUTHORIZE_IMPLICIT_FLOW) && clientInfo.groups.contains(KongContract.GROUP_HASH_CLIENT)))
+				kongResponse = kongResponse.replace("?", "#")
+		}
+
+		return "redirect:" + kongResponse
+	}
 
 	// common closure to print http response
 	def printResponse = {resp, reader ->
@@ -190,7 +228,34 @@ public class AuthorizationController {
 		println '--------------------'
 	}
 
+	// copied from stackoverflow
+	public static Map<String, String> splitQuery(String query) throws UnsupportedEncodingException {
+		Map<String, String> query_pairs = new LinkedHashMap<String, String>();
+		if (!query)
+			return query_pairs
+		String[] pairs = query.split("&");
+		for (String pair : pairs) {
+			int idx = pair.indexOf("=");
+			query_pairs.put(URLDecoder.decode(pair.substring(0, idx), "UTF-8"), URLDecoder.decode(pair.substring(idx + 1), "UTF-8"));
+		}
+		return query_pairs;
+	}
 
+	private ApiInfo getApiInfo(String apiId){
+		try {
+			RestTemplate rest = new RestTemplate();
+			ApiInfo apiInfo = rest.getForObject(kongAdminUrl + "/apis/" + apiId, ApiInfo.class);
+			Map pluginInfo = rest.getForObject(kongAdminUrl + "/apis/" + apiId + "/plugins", Map.class);
+			pluginInfo?.data?.each { plugin ->
+				if (plugin.name == "oauth2")
+					apiInfo.provisionKey = plugin.config.provision_key;
+			}
+			return apiInfo
+		}catch (Exception e){
+			e.printStackTrace()
+			return null;
+		}
+	}
 	private String submitAuthorization(String authenticatedUserId, String redirectUri,
 	                                   String submitTo, String provisionKey, AuthRequest authRequest) {
 		/*$ curl https://your.api.com/oauth2/authorize \
@@ -202,6 +267,8 @@ public class AuthorizationController {
 			--data "authenticated_userid=XXX"
 		*/
 
+		// todo when Mashape fixes the error with redirectUri, use the one passed in here
+
 		def redirect_uri = null;
 
 		// perform a POST request, expecting JSON response (redirect url)
@@ -210,7 +277,7 @@ public class AuthorizationController {
 			requestContentType = ContentType.URLENC
 			body = [client_id: authRequest.client_id, response_type: authRequest.response_type,
 			        scope    : authRequest.scope, provision_key: provisionKey,
-			        authenticated_userid: authenticatedUserId] // do NOT use authRequest.user_id as it can be spoofed
+			        authenticated_userid: authenticatedUserId] // MUST use authenticatedUserId of SSO user
 
 			// response handler for a success response code
 			response.success = { resp, reader ->
@@ -222,21 +289,20 @@ public class AuthorizationController {
 			}
 			response.failure = { resp, reader ->
 				printResponse(resp, reader)
-				redirect_uri = reader.toString()
+				//redirect_uri = reader.toString()
 			}
 		}
 		return redirect_uri
 	}
 
-	public String authDeny(AuthRequest authRequest) {
-		String clientCallbackUrl = "unknown"; // todo if app not found, show error page
-		RestTemplate restTemplate = new RestTemplate();
-		Map clientInfo = restTemplate.getForObject(kongAdminUrl + "/oauth2?client_id=" + authRequest.client_id, Map.class);
-		if (clientInfo["data"] != null && clientInfo["data"] instanceof List && clientInfo["data"].size() > 0)
-			clientCallbackUrl = (String) clientInfo["data"][0]["redirect_uri"];
+	public String authDeny(AuthRequest authRequest, Model model) {
+		ClientInfo clientInfo = getClientInfo(authRequest)
+		if (!clientInfo) {
+			model.addAttribute("text", "Unknown application (client_id)")
+			return "generic_response" // todo show ERROR page
+		}
 
-		// todo build redirect url in a smart way (assuming there could be other parameters already)
-		clientCallbackUrl += "/?error=access_denied&error_description=The+user+denied+access+to+your+application";
+		String clientCallbackUrl = clientInfo.redirectUri+"?error=access_denied&error_description=The+user+denied+access+to+your+application";
 
 		return "redirect:" + clientCallbackUrl;
 	}
