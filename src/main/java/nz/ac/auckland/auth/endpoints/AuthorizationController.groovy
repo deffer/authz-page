@@ -270,13 +270,16 @@ public class AuthorizationController {
 		// todo when Mashape fixes the error with redirectUri, use the one passed in here
 
 		def redirect_uri = null;
+		String scopes = ""
+		if (authRequest.scope)
+			scopes = authRequest.scope.replaceAll(',', ' ')
 
 		// perform a POST request, expecting JSON response (redirect url)
 		def http = new HTTPBuilder(kongProxyUrl + submitTo)
 		http.request(Method.POST, ContentType.JSON) {
 			requestContentType = ContentType.URLENC
 			body = [client_id: authRequest.client_id, response_type: authRequest.response_type,
-			        scope    : authRequest.scope, provision_key: provisionKey,
+			        scope    : scopes, provision_key: provisionKey,
 			        authenticated_userid: authenticatedUserId] // MUST use authenticatedUserId of SSO user
 
 			// response handler for a success response code

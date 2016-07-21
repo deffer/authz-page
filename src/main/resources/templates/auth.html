@@ -59,6 +59,7 @@
 		<input type="hidden" th:field="*{response_type}"/>
 		<input type="hidden" th:field="*{redirect_uri}"/>
 		<input type="hidden" th:field="*{state}"/>
+		<input type="hidden" th:field="*{scope}"/>
 		<input type="hidden" th:field="*{use_fragment}"/>
 		<div class="jumbotron" th:switch="${clientError}">
 			<h2>Authorize application</h2>
