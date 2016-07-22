@@ -18,7 +18,7 @@ import org.springframework.web.client.RestTemplate
 import sun.org.mozilla.javascript.internal.EcmaError
 
 @Controller
-// to do:  add csrf protection to prevent user from unknowingly submitting approval by following specially crafted link
+// to do:  add csrf protection. to prevent user from unknowingly submitting approval by following specially crafted link
 //         (using POST should prevent it, but its better to have more protection in place)
 // do NOT enable CORS on any of these method
 public class AuthorizationController {
@@ -28,9 +28,12 @@ public class AuthorizationController {
 	public static final String AUTHORIZE_IMPLICIT_FLOW = "token"
 
 
-	// to do take from properties
-	private String kongAdminUrl = "https://admin.api.dev.auckland.ac.nz/";
-	private String kongProxyUrl = "https://proxy.api.dev.auckland.ac.nz";
+
+	@Value("kong.admin.url")
+	private String kongAdminUrl = "https://admin.api.dev.auckland.ac.nz/"; // needs trailing /
+
+	@Value("kong.proxy.url")
+	private String kongProxyUrl = "https://proxy.api.dev.auckland.ac.nz"; // does NOT need trailing /   ?????
 
 
 	@Value('${as.debug}')
@@ -312,7 +315,7 @@ public class AuthorizationController {
 
 	private ClientInfo getClientInfo(AuthRequest authRequest){
 		ClientInfo result = new ClientInfo()
-		Map map = new RestTemplate().getForObject(kongAdminUrl + "/oauth2?client_id=" + authRequest.client_id, Map.class);
+		Map map = new RestTemplate().getForObject(KongContract.oauth2ClientQuery(kongAdminUrl,authRequest.client_id), Map.class);
 
 		if (ClientInfo.loadFromClientResponse(map, result)){
 			map = new RestTemplate().getForObject("$kongAdminUrl/consumers/${result.consumerId}/acls", Map.class);

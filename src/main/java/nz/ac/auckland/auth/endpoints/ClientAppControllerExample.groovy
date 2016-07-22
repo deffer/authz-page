@@ -113,6 +113,18 @@ class ClientAppControllerExample {
 		)
 	}
 
+	def handler = {resp, reader, func ->
+		println "response status: ${resp.statusLine}"
+		println 'Headers: -----------'
+		resp.headers.each { h ->
+			println " ${h.name} : ${h.value}"
+		}
+		println 'Response data: -----'
+		println reader
+		println '--------------------'
+		func(resp, reader);
+	}
+
 	private TokenResponse requestToken(ServerInfo serverInfo, String code){
 
 		String tokenUrl = kongProxyUrl+apiAuthPath+"oauth2/token" // no double slash!!!
@@ -129,17 +141,6 @@ class ClientAppControllerExample {
 			requestContentType = ContentType.URLENC
 			body = [client_id: serverInfo.clientId, grant_type: "authorization_code",
 					client_secret: serverInfo.clientSecret, code:code ]
-			def handler = {resp, reader, func ->
-				println "response status: ${resp.statusLine}"
-				println 'Headers: -----------'
-				resp.headers.each { h ->
-					println " ${h.name} : ${h.value}"
-				}
-				println 'Response data: -----'
-				println reader
-				println '--------------------'
-				func(resp, reader);
-			}
 			response.success = handler.rcurry({resp, reader->
 				// (new JsonSlurper()).parse(this.parseText(resp));
 				result = reader as TokenResponse
@@ -165,17 +166,6 @@ class ClientAppControllerExample {
 			//body = queryData
 			headers = [Authorization: "bearer "+token.access_token]
 			println "Passing toke in header: "+token.access_token
-			def handler = {resp, reader, func ->
-				println "response status: ${resp.statusLine}"
-				println 'Headers: -----------'
-				resp.headers.each { h ->
-					println " ${h.name} : ${h.value}"
-				}
-				println 'Response data: -----'
-				println reader
-				println '--------------------'
-				func(resp, reader);
-			}
 			response.success = handler.rcurry({resp, reader->
 				result = reader.text
 			})
@@ -202,17 +192,6 @@ class ClientAppControllerExample {
 			requestContentType = ContentType.JSON
 			body = queryData
 			headers = [Authorization: "bearer "+token.access_token]
-			def handler = {resp, reader, func ->
-				println "response status: ${resp.statusLine}"
-				println 'Headers: -----------'
-				resp.headers.each { h ->
-					println " ${h.name} : ${h.value}"
-				}
-				println 'Response data: -----'
-				println reader
-				println '--------------------'
-				func(resp, reader);
-			}
 			response.success = handler.rcurry({resp, reader->
 				result = reader.toString()
 			})
