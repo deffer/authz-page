@@ -18,7 +18,7 @@ class KongContract {
 
 		if (base.endsWith('/')) {
 			if (path.startsWith('/'))
-				return base[0..base.length()] + path
+				return base[0..base.length()-2] + path
 			else
 				return base + path
 		}else{

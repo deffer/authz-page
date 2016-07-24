@@ -70,4 +70,14 @@ public class ClientInfo {
 			consumerResponse["data"].each{Map it-> if (it.group != null) self.groups.add((String)it.group) }
 	}
 
+	public String redirectHost(){
+		try {
+			URI uri = new URI(redirectUri)
+			return (uri.getScheme() ? uri.getScheme() + "://" : "") + uri.getHost()
+		}catch (Exception e){
+			e.printStackTrace()
+			return "Error"
+		}
+	}
+
 }

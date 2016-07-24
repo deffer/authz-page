@@ -42,7 +42,7 @@ public class AuthorizationController {
 
 	@RequestMapping("/{api_id}/oauth2/authorize")
 	public String authForm(@RequestHeader(value = "REMOTE_USER", defaultValue = "NULL") String userId,
-	                       @RequestHeader(value = "HTTP_DISPLAYNAME", defaultValue = "NULL") String userName,
+	                       @RequestHeader(value = "displayName", defaultValue = "NULL") String userName,
 	                       @PathVariable("api_id") String apiId, AuthRequest authRequest, Model model) {
 
 		return renderAuthForm(userId, userName, apiId, authRequest, model);

@@ -30,7 +30,11 @@ class UserProfileController {
 
 	@RequestMapping("/self")
 	public String authForm(@RequestHeader(value = "REMOTE_USER", defaultValue = "iben883") String userId,
-	                       @RequestHeader(value = "HTTP_DISPLAYNAME", defaultValue = "NULL") String userName, Model model) {
+	                       @RequestHeader(value = "displayName", defaultValue = "NULL") String userName, Model model) {
+
+
+		String displayName = userName != "NULL"? userName :  "Unknown (${userId})"
+		model.addAttribute("name", displayName);
 
 		Map tokensResponse = getTokens(userId)
 		if (!tokensResponse.data) {
@@ -44,21 +48,26 @@ class UserProfileController {
 
 	private void prepareView(Map tokensResponse, Model model) {
 		List tokens = tokensResponse.data // also 'total' and 'next'
-		Map appNames = [:]
+		Map apps = [:]
+
 		tokens.each { token ->
-			token.issuedStr = new Date(token.created_at).format("yyyy-dd-MM HH:mm:ss")
-			token.expiresStr = new Date(token.created_at + token.expires_in * 100).format("yyyy-dd-MM HH:mm:ss")
+			long issued = token.created_at
+			token.issuedStr = new Date(issued).format("yyyy-dd-MM")
+			token.issuedHint = new Date(issued).format("HH:mm:ss")
+			long expires = token.created_at + token.expires_in * 1000
+			token.expiresStr = new Date(expires).format("yyyy-dd-MM")
+			token.expiresHint = new Date(expires).format("HH:mm:ss")
 			String appId = token.credential_id
-			if (!(appNames[appId])) {
+			if (!(apps[appId])) {
 				ClientInfo ci = getClientInfo(appId)
-				if (ci) {
-					appNames.put(appId, ci.name)
-				}
+				if (ci)
+					apps.put(appId, ci)
 			}
-			token.name = appNames[appId]
+			token.name = apps[appId]?.name
 		}
 
 		model.addAttribute("tokens", tokens)
+		model.addAttribute("applications", apps)
 	}
 
 
@@ -87,7 +96,7 @@ class UserProfileController {
 		Map map = getMap(KongContract.oauth2ClientQueryById(kongAdminUrl,credentialsId))
 
 		if (map && ClientInfo.loadFromClientResponse(map, result)){
-			map = getMap("$kongAdminUrl/consumers/${result.consumerId}/acls");
+			map = getMap(KongContract.joinUrl(kongAdminUrl, "/consumers/${result.consumerId}/acls"));
 			ClientInfo.loadFromConsumerResponse(map, result)
 			return result
 		}else
