@@ -33,6 +33,10 @@ class KongContract {
 		return joinUrl(kongAdminUrl, OP_CLIENT_OAUTH2)+"?client_id=$clientId"
 	}
 
+	public static String oauth2ClientQueryById(String kongAdminUrl, String id){
+		return joinUrl(kongAdminUrl, OP_CLIENT_OAUTH2)+"?id=$id"
+	}
+
 	public static String listUserTokensQuery(String kongAdminUrl, String userId){
 		return joinUrl(kongAdminUrl, OP_LIST_TOKENS)+"?authenticated_userid=$userId"
 	}

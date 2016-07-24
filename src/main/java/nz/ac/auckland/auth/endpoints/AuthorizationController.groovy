@@ -29,10 +29,10 @@ public class AuthorizationController {
 
 
 
-	@Value("kong.admin.url")
+	@Value('${kong.admin.url}')
 	private String kongAdminUrl = "https://admin.api.dev.auckland.ac.nz/"; // needs trailing /
 
-	@Value("kong.proxy.url")
+	@Value('${kong.proxy.url}')
 	private String kongProxyUrl = "https://proxy.api.dev.auckland.ac.nz"; // does NOT need trailing /   ?????
 
 

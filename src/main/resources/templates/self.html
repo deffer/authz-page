@@ -65,11 +65,18 @@
 
 	<div>
 		<h2>My active tokens</h2>
-		<table class="table table-striped">
-			<tr><th>Application</th><th>Scopes</th><th>Issued on</th><th>Expires</th><th>Action</th></tr>
-			<tr><td>Max prototype app</td><td>identity-read</td><td>read</td><td>21-01-2016</td><td>Never</td><td></td></tr>
-			<tr><td>SOAP UI testing</td><td>course-read</td><td>read,write</td><td>01-12-2016</td><td>3h</td><td></td></tr>
-			<tr><td>Uni calendar App</td><td>timetable-read</td><td></td><td>01-12-2016</td><td>01-12-2016</td><td></td></tr>
+		<table class="table table-striped table-condensed">
+			<tr><th>Application</th><th>Scopes</th><th>Issued on</th><th>Expires on</th><th>Action</th></tr>
+			<tr th:each="tk: ${tokens}">
+				<td><span th:text="${tk.name}"></span></td>
+				<td><span th:text="${tk.scope}"></span></td>
+				<td><span th:text="${tk.issuedStr}"></span></td>
+				<td><span th:text="${tk.expiresStr}"></span></td>
+				<td><a class="btn btn-xs" href="#">
+					<i class="glyphicon glyphicon-trash"></i>
+					Revoke
+				</a></td>
+			</tr>
 		</table>
 	</div>
 
