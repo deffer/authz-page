@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod
 import org.springframework.web.client.RestTemplate
-import sun.org.mozilla.javascript.internal.EcmaError
+
 
 @Controller
 // to do:  add csrf protection. to prevent user from unknowingly submitting approval by following specially crafted link
