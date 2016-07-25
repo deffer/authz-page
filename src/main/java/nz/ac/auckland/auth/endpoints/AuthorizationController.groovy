@@ -87,7 +87,7 @@ public class AuthorizationController {
 		if (clientInfo){
 			if (clientInfo.groups.contains(KongContract.GROUP_AUTH_GRANTED) && authRequest.response_type==AUTHORIZE_IMPLICIT_FLOW){
 				// that's our internal university client application. we trust it and so does the user.
-				String kongResponse = submitAuthorization(userId, clientInfo.redirectUri, apiInfo.request_path + "/oauth2/authorize", apiInfo.provisionKey, authRequest);
+				Map kongResponse = submitAuthorization(userId, clientInfo.redirectUri, apiInfo.request_path + "/oauth2/authorize", apiInfo.provisionKey, authRequest);
 				return makeCallback(kongResponse, authRequest, clientInfo, model, null) // do NOT override callbackUri, huge security risk
 			}
 
@@ -144,6 +144,8 @@ public class AuthorizationController {
 		if (authRequest.actionDeny)
 			return authDeny(authRequest, model);
 
+		String forUser = (authRequest.user_id && debug)?authRequest.user_id : userId
+
 		// fetch api url and oauth2 provision key for given api
 		ApiInfo apiInfo = getApiInfo(apiId);
 		ClientInfo clientInfo = getClientInfo(authRequest)
@@ -170,27 +172,30 @@ public class AuthorizationController {
 
 		// now we need to inform Kong that user authenticatedUserId grants authorization to application cliend_id
 		String submitTo = apiInfo.request_path + "/oauth2/authorize"
-		String kongResponse = submitAuthorization(userId, redirectUri, submitTo, apiInfo.provisionKey, authRequest);
+		Map kongResponseObj = submitAuthorization(forUser, redirectUri, submitTo, apiInfo.provisionKey, authRequest);
 
-		if (authRequest.actionDebug || !(kongResponse)) {
+		if (authRequest.actionDebug || !(kongResponseObj.redirect_uri)) {
 			model.addAttribute("user_id", userId);
 			model.addAttribute("map", authRequest);
 			model.addAttribute("provision_key", apiInfo.provisionKey);
 			model.addAttribute("submitTo", kongProxyUrl + submitTo);
-			model.addAttribute("kongResponse", kongResponse);
+			model.addAttribute("kongResponse", kongResponseObj.toString());
 
 			return "temp";
 		} else {
 			String overrideCallback = authRequest.redirect_uri != clientInfo.redirectUri? authRequest.redirect_uri:null;
-			return makeCallback(kongResponse, authRequest, clientInfo, model, overrideCallback)
+			return makeCallback(kongResponseObj, authRequest, clientInfo, model, overrideCallback)
 		}
 	}
 
-	private String makeCallback(String kongResponse, AuthRequest authRequest, ClientInfo clientInfo, Model model, String overrideCallback){
-		if (!kongResponse){
-			model.addAttribute("text", "Unexpected error (kong response has no redirect)")
+	private String makeCallback(Map kongResponseObject, AuthRequest authRequest, ClientInfo clientInfo, Model model, String overrideCallback){
+		if ((!kongResponseObject) || !(kongResponseObject.redirect_uri)){
+			model.addAttribute("text", "Unexpected error (kong response has no redirect, status ${kongResponseObject?.status})")
 			return "generic_response" // todo show ERROR page
 		}
+
+		String kongResponse = kongResponseObject.redirect_uri
+
 		URI uri = new URI(kongResponse)
 		Map<String, String> params = splitQuery(uri.query)
 
@@ -221,7 +226,7 @@ public class AuthorizationController {
 
 	// common closure to print http response
 	def printResponse = {resp, reader ->
-		println "ERROR response status: ${resp.statusLine}"
+		println "Response status: ${resp.statusLine}"
 		println 'Headers: -----------'
 		resp.headers.each { h ->
 			println " ${h.name} : ${h.value}"
@@ -259,7 +264,7 @@ public class AuthorizationController {
 			return null;
 		}
 	}
-	private String submitAuthorization(String authenticatedUserId, String redirectUri,
+	private Map submitAuthorization(String authenticatedUserId, String redirectUri,
 	                                   String submitTo, String provisionKey, AuthRequest authRequest) {
 		/*$ curl https://your.api.com/oauth2/authorize \
 			--header "Authorization: Basic czZCaGRSa3F0MzpnWDFmQmF0M2JW" \
@@ -272,13 +277,14 @@ public class AuthorizationController {
 
 		// todo when Mashape fixes the error with redirectUri, use the one passed in here
 
-		def redirect_uri = null;
+		Map result = [:]
 		String scopes = ""
 		if (authRequest.scope)
 			scopes = authRequest.scope.replaceAll(',', ' ')
 
 		// perform a POST request, expecting JSON response (redirect url)
 		def http = new HTTPBuilder(kongProxyUrl + submitTo)
+		println "Calling ${http.uri}"
 		http.request(Method.POST, ContentType.JSON) {
 			requestContentType = ContentType.URLENC
 			body = [client_id: authRequest.client_id, response_type: authRequest.response_type,
@@ -287,18 +293,21 @@ public class AuthorizationController {
 
 			// response handler for a success response code
 			response.success = { resp, reader ->
-				if (reader instanceof Map && reader.containsKey("redirect_uri"))
-					redirect_uri = reader.get("redirect_uri")
+				result.put("status", resp.status)
+				if (reader instanceof Map)
+					result.putAll(reader)
 				else
 					printResponse(resp, reader)
 
 			}
 			response.failure = { resp, reader ->
+				result.put("status", resp.status)
+				if (reader instanceof Map)
+					result.putAll(reader)
 				printResponse(resp, reader)
-				//redirect_uri = reader.toString()
 			}
 		}
-		return redirect_uri
+		return result
 	}
 
 	public String authDeny(AuthRequest authRequest, Model model) {
