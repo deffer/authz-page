@@ -7,7 +7,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter
 
 @Configuration
 @PropertySource(value = ['file:${HOME}/.webdev/as.properties', 'file:${HOMEPATH}/.webdev/as.properties'], ignoreResourceNotFound = true)
-public class StaticResourceConfiguration extends WebMvcConfigurerAdapter {
+public class AllConfigurationHere extends WebMvcConfigurerAdapter {
 	@Override
 	public void addResourceHandlers(ResourceHandlerRegistry registry) {
 		if (!registry.hasMappingForPattern("/webjars/**")) {

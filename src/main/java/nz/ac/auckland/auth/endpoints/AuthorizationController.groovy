@@ -88,17 +88,13 @@ public class AuthorizationController {
 			if (clientInfo.groups.contains(KongContract.GROUP_AUTH_GRANTED) && authRequest.response_type==AUTHORIZE_IMPLICIT_FLOW){
 				// that's our internal university client application. we trust it and so does the user.
 				Map kongResponse = submitAuthorization(userId, clientInfo.redirectUri, apiInfo.request_path + "/oauth2/authorize", apiInfo.provisionKey, authRequest);
-				return makeCallback(kongResponse, authRequest, clientInfo, model, null) // do NOT override callbackUri, huge security risk
+				return makeCallback(kongResponse, authRequest, clientInfo, model, null) // null - do NOT override callbackUri (due to huge security risk)
 			}
 
-			if ( (!authRequest.redirect_uri) || authRequest.redirect_uri==clientInfo.redirectUri)
-				authRequest.redirect_uri = clientInfo.redirectUri
-			else {
-				model.addAttribute("clientWarning", clientInfo.redirectUri)
-				if (!clientInfo.groups.contains(KongContract.GROUP_DYNAMIC_CLIENT))
-					model.addAttribute("clientError", "callback_match")
-
+			if (!isOkToRedirect(authRequest, clientInfo, model)){
+				model.addAttribute("clientError", "callback_match")
 			}
+
 
 			URI uri = new URI(authRequest.redirect_uri)
 			model.addAttribute("appname", clientInfo.name);
@@ -159,9 +155,10 @@ public class AuthorizationController {
 			return "temp";
 		}
 
-		// if redirectUri is overridden and it is allowed, set it here
-		String redirectUri = authRequest.redirect_uri
-		if (authRequest.redirect_uri != clientInfo.redirectUri && !clientInfo.groups.contains(KongContract.GROUP_DYNAMIC_CLIENT)){
+		// if different redirectUri is passed, check whether it is allowed for this client. i.e.
+		//    if (authRequest.redirect_uri != clientInfo.redirectUri
+		//     && !clientInfo.groups.contains(KongContract.GROUP_DYNAMIC_CLIENT)){
+		if (!isOkToRedirect(authRequest, clientInfo, model)){
 			// todo show error page
 			println("Mismatched callback uri: passed '${authRequest.redirect_uri}' expected '${clientInfo.redirectUri}'")
 			model.addAttribute("user_id", userId);
@@ -169,6 +166,9 @@ public class AuthorizationController {
 			model.addAttribute("provision_key", apiInfo.provisionKey);
 			return "temp";
 		}
+
+		// if redirectUri is overridden and it is allowed, set it here
+		String redirectUri = authRequest.redirect_uri
 
 		// now we need to inform Kong that user authenticatedUserId grants authorization to application cliend_id
 		String submitTo = apiInfo.request_path + "/oauth2/authorize"
@@ -185,6 +185,42 @@ public class AuthorizationController {
 		} else {
 			String overrideCallback = authRequest.redirect_uri != clientInfo.redirectUri? authRequest.redirect_uri:null;
 			return makeCallback(kongResponseObj, authRequest, clientInfo, model, overrideCallback)
+		}
+	}
+
+	/**
+	 * This function is normally called twice: before rendering the main page and before redirecting to consumer app
+	 *
+	 * Verify whether requested redirect_uri matches the one registered for this client.
+	 * If its not, will also check whether overriding redirect is allowed for these client
+	 *   and return false if redirect is not allowed, otherwise update model with warning and return true.
+	 *
+	 * @param authRequest what was passed in teh request. contains new redirect_uri (if passed)
+	 * @param clientInfo whats registered for this client in Kong
+	 * @param model can be empty, as in the case of calling this method before issuing a final redirect.
+	 * @return
+	 */
+	private boolean isOkToRedirect(AuthRequest authRequest, ClientInfo clientInfo, Model model){
+		if ( (!authRequest.redirect_uri) || authRequest.redirect_uri==clientInfo.redirectUri) {
+			authRequest.redirect_uri = clientInfo.redirectUri
+			return true
+		} else {
+			model?.addAttribute("clientWarning", clientInfo.redirectUri)
+			if (clientInfo.groups.contains(KongContract.GROUP_AUTH_GRANTED))
+				return false; // should never be reached as this condition must be captured earlier
+
+			if (!clientInfo.groups.contains(KongContract.GROUP_DYNAMIC_CLIENT))
+				return false
+				//model.addAttribute("clientError", "callback_match")
+
+			// test url itself. the host must be localhost, or must match the registered one
+			URI newUri = new URI(authRequest.redirect_uri)
+			if (newUri.getHost()?.equalsIgnoreCase("localhost"))
+				return true;
+
+			URI registeredUri = new URI(clientInfo.redirectUri)
+
+			return KongContract.hostMatch(newUri, registeredUri)
 		}
 	}
 
@@ -205,8 +241,7 @@ public class AuthorizationController {
 			if (uri.query)
 				newQuery = uri.query + "&" + newQuery;
 
-			URI newUri = new URI(uri.getScheme(), uri.getAuthority(),
-					uri.getPath(), newQuery, uri.getFragment());
+			URI newUri = new URI(uri.getScheme(), uri.getAuthority(), uri.getPath(), newQuery, uri.getFragment());
 
 			kongResponse = newUri.toString()
 			uri = newUri
@@ -345,6 +380,5 @@ public class AuthorizationController {
 		model.addAttribute("scopes", scopes); // to do scopes description
 		return true
 	}
-
 
 }

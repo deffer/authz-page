@@ -40,4 +40,12 @@ class KongContract {
 	public static String listUserTokensQuery(String kongAdminUrl, String userId){
 		return joinUrl(kongAdminUrl, OP_LIST_TOKENS)+"?authenticated_userid=$userId"
 	}
+
+	public static hostMatch(URI uri1, URI uri2){
+		//URI newUri = new URI(uri.getScheme(), uri.getAuthority(), uri.getPath(), newQuery, uri.getFragment());
+		URI host1 = new URI(uri1.getScheme(), uri1.getAuthority(), "/", "", "")
+		URI host2 = new URI(uri2.getScheme(), uri2.getAuthority(), "/", "", "")
+		return host1.equals(host2)
+	}
+
 }
