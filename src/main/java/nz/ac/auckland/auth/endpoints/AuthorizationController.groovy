@@ -35,6 +35,8 @@ public class AuthorizationController {
 	@Value('${kong.proxy.url}')
 	private String kongProxyUrl = "https://proxy.api.dev.auckland.ac.nz"; // does NOT need trailing /   ?????
 
+	@Value('${kong.admin.key}')
+	private String kongAdminKey = "none";
 
 	@Value('${as.debug}')
 	private boolean debug = false
@@ -371,13 +373,13 @@ public class AuthorizationController {
 	}
 
 	private  boolean processScopes(AuthRequest authRequest, Model model){
-		// todo get scopes from request
-		// todo get scopes description from ?<TBD>?
+		// todo if scope dis not valid for this endpoint, warn the user right away?
+		String[] requestedScopes = authRequest.scope?.split(",")
 		Map<String, String> scopes = new HashMap<>();
-		scopes.put("person-read", "Allows application to read person information on your behalf. This is just an example scope to test the layout of the displayed page, please ignore it.");
-		scopes.put("person-write", "Allows application to update person information on your behalf. Your current role-based privileges will apply. This is just an example scope to test the layout of the displayed page, please ignore it.");
-		scopes.put("enrollment-read", "Allows application to read student enrollments on your behalf. Your current role-based privileges will apply. This is just an example scope to test the layout of the displayed page, please ignore it.");
-		model.addAttribute("scopes", scopes); // to do scopes description
+		requestedScopes.each {
+			scopes.put(it, KongContract.getScopeDescription(it, kongProxyUrl, kongAdminKey))
+		}
+		model.addAttribute("scopes", scopes);
 		return true
 	}
 

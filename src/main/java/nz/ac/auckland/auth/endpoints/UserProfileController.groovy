@@ -1,8 +1,5 @@
 package nz.ac.auckland.auth.endpoints
 
-import groovyx.net.http.ContentType
-import groovyx.net.http.HTTPBuilder
-import groovyx.net.http.Method
 import nz.ac.auckland.auth.contract.KongContract
 import nz.ac.auckland.auth.formdata.ClientInfo
 import org.springframework.beans.factory.annotation.Value
@@ -10,7 +7,6 @@ import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.client.RestTemplate
 
 @Controller
 class UserProfileController {
@@ -24,8 +20,6 @@ class UserProfileController {
 
 	@Value('${kong.admin.key}')
 	private String kongAdminKey = "none";
-
-
 
 
 	@RequestMapping("/self")
@@ -70,33 +64,17 @@ class UserProfileController {
 		model.addAttribute("applications", apps)
 	}
 
-
-	def handler = {resp, reader, func ->
-		println "response status: ${resp.statusLine}"
-		if (resp.status !=200) {
-			println 'Headers: -----------'
-			resp.headers.each { h ->
-				println " ${h.name} : ${h.value}"
-			}
-			println 'Response data: -----'
-			println reader
-			println '--------------------'
-		}
-		func(resp, reader);
-	}
-
-
 	private Map getTokens(String userId){
-		return getMap(KongContract.listUserTokensQuery(kongAdminUrl, userId))
+		return KongContract.getMap(KongContract.listUserTokensQuery(kongAdminUrl, userId), kongAdminKey)
 	}
 
 	private ClientInfo getClientInfo(String credentialsId){
 		ClientInfo result = new ClientInfo()
 
-		Map map = getMap(KongContract.oauth2ClientQueryById(kongAdminUrl,credentialsId))
+		Map map = KongContract.getMap(KongContract.oauth2ClientQueryById(kongAdminUrl,credentialsId), kongAdminKey)
 
 		if (map && ClientInfo.loadFromClientResponse(map, result)){
-			map = getMap(KongContract.joinUrl(kongAdminUrl, "/consumers/${result.consumerId}/acls"));
+			map = KongContract.getMap(KongContract.joinUrl(kongAdminUrl, "/consumers/${result.consumerId}/acls"), kongAdminKey);
 			ClientInfo.loadFromConsumerResponse(map, result)
 			return result
 		}else
@@ -104,25 +82,4 @@ class UserProfileController {
 
 	}
 
-	private Map getMap(String url){
-		Map map = null
-		def http = new HTTPBuilder(url)
-		println "Calling "+http.uri
-		http.request(Method.GET, ContentType.JSON) {
-			requestContentType = ContentType.JSON
-			//body = queryData
-			if (kongAdminKey && kongAdminKey!="none")
-				headers = [apikey: kongAdminKey]
-
-			response.success = handler.rcurry({resp, reader->
-				if (reader instanceof Map)
-					map = reader
-			})
-			response.failure = handler.rcurry({resp, reader->
-				println "ERROR:\r$reader"
-			})
-		}
-
-		return map
-	}
 }
