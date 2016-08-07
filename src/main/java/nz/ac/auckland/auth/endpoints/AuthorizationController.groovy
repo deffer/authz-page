@@ -68,10 +68,6 @@ public class AuthorizationController {
 		if (!sanitizeRequestParameters(authRequest, userId, model))
 			return "generic_response" // todo show ERROR page
 
-		// pass request input values to the view in hidden fields
-		model.addAttribute("map", authRequest);
-		List<String> validScopes = processScopes(authRequest, model)
-
 		// defined greetings value
 		String displayName = userName != "NULL"? userName :  "Unknown (${authRequest.user_id})"
 		model.addAttribute("name", displayName);
@@ -86,6 +82,12 @@ public class AuthorizationController {
 			model.addAttribute("clientError", "noauth_api")
 			return "auth";
 		}
+
+		List<String> validScopes = processScopes(authRequest, apiInfo, model)
+		authRequest.scope = validScopes.join(" ")
+
+		// pass request input values to the view in hidden fields
+		model.addAttribute("map", authRequest);
 
 		// find out application and consumer details
 		ClientInfo clientInfo = getClientInfo(authRequest)
@@ -316,8 +318,10 @@ public class AuthorizationController {
 			ApiInfo apiInfo = rest.getForObject(kongAdminUrl + "/apis/" + apiId, ApiInfo.class);
 			Map pluginInfo = rest.getForObject(kongAdminUrl + "/apis/" + apiId + "/plugins", Map.class);
 			pluginInfo?.data?.each { plugin ->
-				if (plugin.name == "oauth2")
+				if (plugin.name == "oauth2") {
 					apiInfo.provisionKey = plugin.config.provision_key;
+					apiInfo.scopes = plugin.config.scopes
+				}
 			}
 			return apiInfo
 		}catch (Exception e){
@@ -341,8 +345,8 @@ public class AuthorizationController {
 		Map result = [:]
 		String scopes = ""
 		if (authRequest.scope)
-			//scopes = authRequest.scope.replaceAll(',', ' ')
-			scopes = processScopes(authRequest, null).join(" ")
+			scopes = authRequest.scope.replaceAll(',', ' ')
+			//scopes = processScopes(authRequest, null).join(" ")
 
 		// perform a POST request, expecting JSON response (redirect url)
 		def http = new HTTPBuilder(kongProxyUrl + submitTo)
@@ -397,8 +401,7 @@ public class AuthorizationController {
 
 	}
 
-	private List<String> processScopes(AuthRequest authRequest, Model model){
-		// todo if scope is not valid for this endpoint, warn the user right away?
+	private List<String> processScopes(AuthRequest authRequest, ApiInfo apiInfo, Model model){
 		List<String> validScopes = []
 		Map<String, String> scopes = new HashMap<>();
 		if (!authRequest.scope)
@@ -409,11 +412,18 @@ public class AuthorizationController {
 			requestedScopes = authRequest.scope?.split(",")
 
 		requestedScopes.each {
-			String scopeDescription = KongContract.getScopeDescription(it, kongProxyUrl, kongAdminKey)
-			if (scopeDescription) {
-				scopes.put(it, scopeDescription)
+			if (apiInfo?.scopes?.contains(it)){
 				validScopes.add(it)
+				String scopeDescription = KongContract.getScopeDescription(it, kongProxyUrl, kongAdminKey)
+				if (scopeDescription)
+					scopes.put(it, scopeDescription)
+				else {
+					// todo if we cant find description of a scope, what should be do
+				}
+			}else{
+				// todo if scope is not valid for this endpoint, warn the user right away?
 			}
+
 		}
 		model?.addAttribute("scopes", scopes);
 		return validScopes

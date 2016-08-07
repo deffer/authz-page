@@ -21,6 +21,7 @@ class ApiInfo {
 
 	// will be populated after a call to oauth2 plugin
 	String provisionKey
+	List<String> scopes
 
 	// plugin info can be retrieved by calling http://localhost:8001/apis/pcfdev-oauth/plugins
 	// and the result would be
@@ -42,8 +43,7 @@ class ApiInfo {
 				"enable_authorization_code": true,
 				"provision_key": "pcfdev-api-key",
 				"enable_client_credentials": false,
-				"scopes": ["pcfread",
-				"pcfwrite"]
+				"scopes": ["pcfread", "pcfwrite"]
 			}
 		}]
 	}
