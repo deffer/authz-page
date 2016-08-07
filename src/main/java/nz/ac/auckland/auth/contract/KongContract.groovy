@@ -50,11 +50,24 @@ class KongContract {
 	}
 
 
-	public static hostMatch(URI uri1, URI uri2){
+	public static boolean hostMatch(URI uri1, URI uri2){
 		//URI newUri = new URI(uri.getScheme(), uri.getAuthority(), uri.getPath(), newQuery, uri.getFragment());
 		URI host1 = new URI(uri1.getScheme(), uri1.getAuthority(), "/", "", "")
 		URI host2 = new URI(uri2.getScheme(), uri2.getAuthority(), "/", "", "")
 		return host1.equals(host2)
+	}
+
+	public static boolean hostMatchAny(URI uri, List<String> hosts){
+		String current = uri.getHost()?.toLowerCase() // unicode????
+		if ((!current) || !hosts)
+			return false;
+
+		for (String host: hosts){
+			if (host && current.endsWith(host.toLowerCase()))
+				return true;
+		}
+
+		return false;
 	}
 
 	// beware of possible DDOS by requesting random scopes.
@@ -94,9 +107,15 @@ class KongContract {
 		func(resp, reader);
 	}
 
-
+	/**
+	 * Calls GET endpoint on Kong and returns result as Map (if there was no errors)
+	 * @param fullUrl
+	 * @param kongAdminKey
+	 * @return empty map if there was an error. The error message will be logged.
+	 *   This is not an error we can recover from or display it to a user.
+	 */
 	public static Map getMap(String fullUrl, String kongAdminKey){
-		Map map = null
+		Map map = [:]
 		def http = new HTTPBuilder(fullUrl)
 		println "Calling "+http.uri
 		http.request(Method.GET, ContentType.JSON) {

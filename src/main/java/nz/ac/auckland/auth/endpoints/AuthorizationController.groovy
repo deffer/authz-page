@@ -28,7 +28,6 @@ public class AuthorizationController {
 	public static final String AUTHORIZE_IMPLICIT_FLOW = "token"
 
 
-
 	@Value('${kong.admin.url}')
 	private String kongAdminUrl = "https://admin.api.dev.auckland.ac.nz/"; // needs trailing /
 
@@ -40,6 +39,9 @@ public class AuthorizationController {
 
 	@Value('${as.debug}')
 	private boolean debug = false
+
+	@Value('${as.trustedRedirectHosts}')
+	private List<String> trustedRedirectHosts
 
 
 	@RequestMapping("/{api_id}/oauth2/authorize")
@@ -53,9 +55,10 @@ public class AuthorizationController {
 	// http://localhost:8090/pcfdev-oauth/auth?client_id=irina_oauth2_pluto&response_type=code&scope=read,write
 	@Deprecated
 	@RequestMapping("/{api_id}/auth")
-	public String authFormDeprecated(@RequestHeader(value = "REMOTE_USER", defaultValue = "NULL") String userId,
-						   @RequestHeader(value = "displayName", defaultValue = "NULL") String userName,
-	                       @PathVariable("api_id") String apiId, AuthRequest authRequest, Model model) {
+	public String authFormDeprecated(
+			@RequestHeader(value = "REMOTE_USER", defaultValue = "NULL") String userId,
+			@RequestHeader(value = "displayName", defaultValue = "NULL") String userName,
+	        @PathVariable("api_id") String apiId, AuthRequest authRequest, Model model) {
 		return renderAuthForm(userId, userName, apiId, authRequest, model);
 	}
 
@@ -67,7 +70,7 @@ public class AuthorizationController {
 
 		// pass request input values to the view in hidden fields
 		model.addAttribute("map", authRequest);
-		processScopes(authRequest, model)
+		List<String> validScopes = processScopes(authRequest, model)
 
 		// defined greetings value
 		String displayName = userName != "NULL"? userName :  "Unknown (${authRequest.user_id})"
@@ -100,7 +103,8 @@ public class AuthorizationController {
 
 			URI uri = new URI(authRequest.redirect_uri)
 			model.addAttribute("appname", clientInfo.name);
-			model.addAttribute("appurl", (uri.getScheme() ? uri.getScheme() + "://" : "") + uri.getHost());
+			//model.addAttribute("appurl", (uri.getScheme() ? uri.getScheme() + "://" : "") + uri.getHost());
+			model.addAttribute("appurl", uri.toString());
 			model.addAttribute("apiid", apiId);
 		}else{
 			model.addAttribute("clientError", "unknown_client")
@@ -191,11 +195,19 @@ public class AuthorizationController {
 	}
 
 	/**
-	 * This function is normally called twice: before rendering the main page and before redirecting to consumer app
+	 * During auth flow this function is normally called twice:
+	 *   - before rendering the main page and
+	 *   - before redirecting to consumer app
 	 *
 	 * Verify whether requested redirect_uri matches the one registered for this client.
 	 * If its not, will also check whether overriding redirect is allowed for these client
 	 *   and return false if redirect is not allowed, otherwise update model with warning and return true.
+	 * The warning is not shown if the client is from the list of trusted clients. For example
+	 *   if the client is University API Explorer or Gelato (dev portal) API Explorer
+	 *
+	 * Redirect override is allowed under next conditions:
+	 *   - first, client MUST be in the Kong group system-dynamic-client
+	 *   - overridden callback MUST be on the same domain as registered one OR if we are in DEV it could be localhost
 	 *
 	 * @param authRequest what was passed in teh request. contains new redirect_uri (if passed)
 	 * @param clientInfo whats registered for this client in Kong
@@ -207,13 +219,17 @@ public class AuthorizationController {
 			authRequest.redirect_uri = clientInfo.redirectUri
 			return true
 		} else {
-			model?.addAttribute("clientWarning", clientInfo.redirectUri)
-			if (clientInfo.groups.contains(KongContract.GROUP_AUTH_GRANTED))
-				return false; // should never be reached as this condition must be captured earlier
 
-			if (!clientInfo.groups.contains(KongContract.GROUP_DYNAMIC_CLIENT))
+			if (clientInfo.groups.contains(KongContract.GROUP_AUTH_GRANTED)) {
+				model?.addAttribute("clientWarning", clientInfo.redirectUri)
+				return false; // should never be reached as this condition must be captured earlier
+			}
+
+			if (!clientInfo.groups.contains(KongContract.GROUP_DYNAMIC_CLIENT)) {
+				model?.addAttribute("clientWarning", clientInfo.redirectUri)
+				//model.addAttribute("clientError", "callback_match") // will be added outside of this func
 				return false
-				//model.addAttribute("clientError", "callback_match")
+			}
 
 			// test url itself. the host must be localhost, or must match the registered one
 			URI newUri = new URI(authRequest.redirect_uri)
@@ -222,7 +238,15 @@ public class AuthorizationController {
 
 			URI registeredUri = new URI(clientInfo.redirectUri)
 
-			return KongContract.hostMatch(newUri, registeredUri)
+			if (KongContract.hostMatch(newUri, registeredUri)){
+				//decide if need to show warning
+				if (!KongContract.hostMatchAny(newUri, trustedRedirectHosts))
+					model?.addAttribute("clientWarning", clientInfo.redirectUri)
+				return true
+			}else {
+				model?.addAttribute("clientWarning", clientInfo.redirectUri)
+				return false
+			}
 		}
 	}
 
@@ -317,11 +341,12 @@ public class AuthorizationController {
 		Map result = [:]
 		String scopes = ""
 		if (authRequest.scope)
-			scopes = authRequest.scope.replaceAll(',', ' ')
+			//scopes = authRequest.scope.replaceAll(',', ' ')
+			scopes = processScopes(authRequest, null).join(" ")
 
 		// perform a POST request, expecting JSON response (redirect url)
 		def http = new HTTPBuilder(kongProxyUrl + submitTo)
-		println "Calling ${http.uri}"
+		println "Calling ${http.uri} with scopes $scopes and user $authenticatedUserId"
 		http.request(Method.POST, ContentType.JSON) {
 			requestContentType = ContentType.URLENC
 			body = [client_id: authRequest.client_id, response_type: authRequest.response_type,
@@ -372,15 +397,26 @@ public class AuthorizationController {
 
 	}
 
-	private  boolean processScopes(AuthRequest authRequest, Model model){
-		// todo if scope dis not valid for this endpoint, warn the user right away?
-		String[] requestedScopes = authRequest.scope?.split(",")
+	private List<String> processScopes(AuthRequest authRequest, Model model){
+		// todo if scope is not valid for this endpoint, warn the user right away?
+		List<String> validScopes = []
 		Map<String, String> scopes = new HashMap<>();
+		if (!authRequest.scope)
+			return validScopes
+
+		String[] requestedScopes = authRequest.scope?.split(" ")
+		if (requestedScopes.length==1 && requestedScopes[0].contains(','))
+			requestedScopes = authRequest.scope?.split(",")
+
 		requestedScopes.each {
-			scopes.put(it, KongContract.getScopeDescription(it, kongProxyUrl, kongAdminKey))
+			String scopeDescription = KongContract.getScopeDescription(it, kongProxyUrl, kongAdminKey)
+			if (scopeDescription) {
+				scopes.put(it, scopeDescription)
+				validScopes.add(it)
+			}
 		}
-		model.addAttribute("scopes", scopes);
-		return true
+		model?.addAttribute("scopes", scopes);
+		return validScopes
 	}
 
 }

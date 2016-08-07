@@ -118,14 +118,15 @@
 				</div>
 			</div>
 			<div th:case="noauth_api">
-				<p>Requested API access (OAuth2) is not supported with this API. The client application you are using is probably outdated.
-					BACK.</p>
+				<p>Requested API access (OAuth2) is not supported with this API. There could be two reasons for seeing this error:
+					the client application you are using is outdated or our API is not configured properly. We have logged this issue
+					with our support team for investigation.</p>
 			</div>
 			<div th:case="unknown_api">
-				<p>This is a request for unknown API. The link is broken or API was decommissioned. We cant help, please go back.</p>
+				<p>This is a request for unknown API. The link is broken or API was decommissioned. Please report this error to application developer</p>
 			</div>
 			<div th:case="unknown_client">
-				<p>Some unregistered application sent you to this page. We cant help, please go back.</p>
+				<p>Sorry, application sent you to this page is not registered with us. We blocked this request to keep you safe.</p>
 			</div>
 			<div th:case="callback_match">
 				<p>Unable to verify identity of the calling application - mismatched callback url. We blocked this request to keep you safe.
