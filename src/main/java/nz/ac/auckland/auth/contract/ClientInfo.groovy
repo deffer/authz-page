@@ -1,18 +1,14 @@
-package nz.ac.auckland.auth.formdata;
+package nz.ac.auckland.auth.contract;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.Map;
-import java.util.Set;
-// Info about consumer and client application, as registered in Kong
+// Info about consumer and client application (credentials), as it is registered in Kong
 public class ClientInfo {
 
-	String clientId
-	String name
-	String redirectUri
-	String consumerId
-	Set<String> groups
+	String clientId // used to identify client application.
+	String name     // application name to display to a user
+	String redirectUri // a callback url where code/token is returned to
+	String consumerId  // internal identifier of a consumer who owns application and credentials
+	Set<String> groups // acl info (groups) of the consumer who owns application and credentials
 
 
 	// CLIENT

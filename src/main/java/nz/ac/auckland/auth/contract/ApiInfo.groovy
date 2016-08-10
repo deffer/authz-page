@@ -1,4 +1,4 @@
-package nz.ac.auckland.auth.formdata
+package nz.ac.auckland.auth.contract
 
 // API info returned by Kong
 class ApiInfo {

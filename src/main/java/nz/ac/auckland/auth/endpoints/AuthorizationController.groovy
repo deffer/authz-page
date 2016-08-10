@@ -4,9 +4,10 @@ import groovyx.net.http.ContentType
 import groovyx.net.http.HTTPBuilder
 import groovyx.net.http.Method
 import nz.ac.auckland.auth.contract.KongContract
-import nz.ac.auckland.auth.formdata.ApiInfo;
+import nz.ac.auckland.auth.contract.ApiInfo;
 import nz.ac.auckland.auth.formdata.AuthRequest
-import nz.ac.auckland.auth.formdata.ClientInfo
+import nz.ac.auckland.auth.contract.ClientInfo
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model
@@ -27,22 +28,14 @@ public class AuthorizationController {
 	public static final String AUTHORIZE_CODE_FLOW = "code"
 	public static final String AUTHORIZE_IMPLICIT_FLOW = "token"
 
-
-	@Value('${kong.admin.url}')
-	private String kongAdminUrl = "https://admin.api.dev.auckland.ac.nz/"; // needs trailing /
-
-	@Value('${kong.proxy.url}')
-	private String kongProxyUrl = "https://proxy.api.dev.auckland.ac.nz"; // does NOT need trailing /   ?????
-
-	@Value('${kong.admin.key}')
-	private String kongAdminKey = "none";
-
 	@Value('${as.debug}')
 	private boolean debug = false
 
 	@Value('${as.trustedRedirectHosts}')
-	private List<String> trustedRedirectHosts
+	private String[] trustedRedirectHosts
 
+	@Autowired
+	KongContract kong
 
 	@RequestMapping("/{api_id}/oauth2/authorize")
 	public String authForm(@RequestHeader(value = "REMOTE_USER", defaultValue = "NULL") String userId,
@@ -90,12 +83,14 @@ public class AuthorizationController {
 		model.addAttribute("map", authRequest);
 
 		// find out application and consumer details
-		ClientInfo clientInfo = getClientInfo(authRequest)
+		ClientInfo clientInfo = kong.getClientInfo(authRequest.client_id)
 		if (clientInfo){
 			if (clientInfo.groups.contains(KongContract.GROUP_AUTH_GRANTED) && authRequest.response_type==AUTHORIZE_IMPLICIT_FLOW){
-				// that's our internal university client application. we trust it and so does the user.
-				Map kongResponse = submitAuthorization(userId, clientInfo.redirectUri, apiInfo.request_path + "/oauth2/authorize", apiInfo.provisionKey, authRequest);
-				return makeCallback(kongResponse, authRequest, clientInfo, model, null) // null - do NOT override callbackUri (due to huge security risk)
+				// that's our internal university client application.
+				// we trust it (and so does the user) as long as the app location is registered and not overridden in request
+				Map kongResponse = submitAuthorization(userId, clientInfo.redirectUri,
+						kong.authorizeUrl(apiInfo.request_path), apiInfo.provisionKey, authRequest);
+				return makeCallback(kongResponse, authRequest, clientInfo, model, null) // null - do NOT override callbackUri
 			}
 
 			if (!isOkToRedirect(authRequest, clientInfo, model)){
@@ -105,7 +100,7 @@ public class AuthorizationController {
 
 			URI uri = new URI(authRequest.redirect_uri)
 			model.addAttribute("appname", clientInfo.name);
-			//model.addAttribute("appurl", (uri.getScheme() ? uri.getScheme() + "://" : "") + uri.getHost());
+			model.addAttribute("apphost", (uri.getScheme() ? uri.getScheme() + "://" : "") + uri.getHost());
 			model.addAttribute("appurl", uri.toString());
 			model.addAttribute("apiid", apiId);
 		}else{
@@ -152,7 +147,7 @@ public class AuthorizationController {
 
 		// fetch api url and oauth2 provision key for given api
 		ApiInfo apiInfo = getApiInfo(apiId);
-		ClientInfo clientInfo = getClientInfo(authRequest)
+		ClientInfo clientInfo = getClientInfo(authRequest.client_id)
 
 		if ( (!clientInfo) || (!apiInfo) || !(apiInfo.provisionKey)){
 			// todo show error page
@@ -179,14 +174,14 @@ public class AuthorizationController {
 		String redirectUri = authRequest.redirect_uri
 
 		// now we need to inform Kong that user authenticatedUserId grants authorization to application cliend_id
-		String submitTo = apiInfo.request_path + "/oauth2/authorize"
+		String submitTo = kong.authorizeUrl(apiInfo.request_path)
 		Map kongResponseObj = submitAuthorization(forUser, redirectUri, submitTo, apiInfo.provisionKey, authRequest);
 
 		if (authRequest.actionDebug || !(kongResponseObj.redirect_uri)) {
 			model.addAttribute("user_id", userId);
 			model.addAttribute("map", authRequest);
 			model.addAttribute("provision_key", apiInfo.provisionKey);
-			model.addAttribute("submitTo", kongProxyUrl + submitTo);
+			model.addAttribute("submitTo", submitTo);
 			model.addAttribute("kongResponse", kongResponseObj.toString());
 
 			return "temp";
@@ -242,7 +237,7 @@ public class AuthorizationController {
 
 			if (KongContract.hostMatch(newUri, registeredUri)){
 				//decide if need to show warning
-				if (!KongContract.hostMatchAny(newUri, trustedRedirectHosts))
+				if (!KongContract.hostMatchAny(newUri, Arrays.asList(trustedRedirectHosts)))
 					model?.addAttribute("clientWarning", clientInfo.redirectUri)
 				return true
 			}else {
@@ -315,8 +310,8 @@ public class AuthorizationController {
 	private ApiInfo getApiInfo(String apiId){
 		try {
 			RestTemplate rest = new RestTemplate();
-			ApiInfo apiInfo = rest.getForObject(kongAdminUrl + "/apis/" + apiId, ApiInfo.class);
-			Map pluginInfo = rest.getForObject(kongAdminUrl + "/apis/" + apiId + "/plugins", Map.class);
+			ApiInfo apiInfo = rest.getForObject(kong.apiInfoQuery(apiId), ApiInfo.class);
+			Map pluginInfo = rest.getForObject(kong.listApiPluginsQuery(apiId), Map.class);
 			pluginInfo?.data?.each { plugin ->
 				if (plugin.name == "oauth2") {
 					apiInfo.provisionKey = plugin.config.provision_key;
@@ -346,10 +341,9 @@ public class AuthorizationController {
 		String scopes = ""
 		if (authRequest.scope)
 			scopes = authRequest.scope.replaceAll(',', ' ')
-			//scopes = processScopes(authRequest, null).join(" ")
 
 		// perform a POST request, expecting JSON response (redirect url)
-		def http = new HTTPBuilder(kongProxyUrl + submitTo)
+		def http = new HTTPBuilder(submitTo)
 		println "Calling ${http.uri} with scopes $scopes and user $authenticatedUserId"
 		http.request(Method.POST, ContentType.JSON) {
 			requestContentType = ContentType.URLENC
@@ -377,7 +371,7 @@ public class AuthorizationController {
 	}
 
 	public String authDeny(AuthRequest authRequest, Model model) {
-		ClientInfo clientInfo = getClientInfo(authRequest)
+		ClientInfo clientInfo = kong.getClientInfo(authRequest.client_id)
 		if (!clientInfo) {
 			model.addAttribute("text", "Unknown application (client_id)")
 			return "generic_response" // todo show ERROR page
@@ -386,19 +380,6 @@ public class AuthorizationController {
 		String clientCallbackUrl = clientInfo.redirectUri+"?error=access_denied&error_description=The+user+denied+access+to+your+application";
 
 		return "redirect:" + clientCallbackUrl;
-	}
-
-	private ClientInfo getClientInfo(AuthRequest authRequest){
-		ClientInfo result = new ClientInfo()
-		Map map = new RestTemplate().getForObject(KongContract.oauth2ClientQuery(kongAdminUrl,authRequest.client_id), Map.class);
-
-		if (ClientInfo.loadFromClientResponse(map, result)){
-			map = new RestTemplate().getForObject("$kongAdminUrl/consumers/${result.consumerId}/acls", Map.class);
-			ClientInfo.loadFromConsumerResponse(map, result)
-			return result
-		}else
-			return null
-
 	}
 
 	private List<String> processScopes(AuthRequest authRequest, ApiInfo apiInfo, Model model){
@@ -414,7 +395,7 @@ public class AuthorizationController {
 		requestedScopes.each {
 			if (apiInfo?.scopes?.contains(it)){
 				validScopes.add(it)
-				String scopeDescription = KongContract.getScopeDescription(it, kongProxyUrl, kongAdminKey)
+				String scopeDescription = kong.getScopeDescription(it)
 				if (scopeDescription)
 					scopes.put(it, scopeDescription)
 				else {

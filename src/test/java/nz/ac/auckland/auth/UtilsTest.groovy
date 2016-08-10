@@ -18,53 +18,40 @@ class UtilsTest {
 
 		assert KongContract.hostMatchAny(new URI("https://changeme.gelato.io"), trustedHosts)
 		assert KongContract.hostMatchAny(new URI("http://changeme.gelato.io"), trustedHosts)
-		//assert KongContract.hostMatchAny(new URI("changeme.gelato.io"), trustedHosts)
 
 		assert KongContract.hostMatchAny(new URI("https://gelato.io"), trustedHosts)
 		assert KongContract.hostMatchAny(new URI("http://gelato.io"), trustedHosts)
-		//assert KongContract.hostMatchAny(new URI("gelato.io"), trustedHosts)
 
 		assert KongContract.hostMatchAny(new URI("https://v1.changeme.gelato.io"), trustedHosts)
 		assert KongContract.hostMatchAny(new URI("http://v1.changeme.gelato.io"), trustedHosts)
-		//assert KongContract.hostMatchAny(new URI("v1.changeme.gelato.io"), trustedHosts)
 
 		assert KongContract.hostMatchAny(new URI("https://changeme.gelato.io/123/abc?field=id"), trustedHosts)
 		assert KongContract.hostMatchAny(new URI("http://changeme.gelato.io/123/abc?field=id"), trustedHosts)
-		//assert KongContract.hostMatchAny(new URI("changeme.gelato.io"), trustedHosts)
 
 		assert KongContract.hostMatchAny(new URI("https://gelato.io/123/abc?field=id"), trustedHosts)
 		assert KongContract.hostMatchAny(new URI("http://gelato.io/123/abc?field=id"), trustedHosts)
-		//assert KongContract.hostMatchAny(new URI("gelato.io/123/abc?field=id"), trustedHosts)
 
 		assert KongContract.hostMatchAny(new URI("https://v1.changeme.gelato.io/123/abc?field=id"), trustedHosts)
 		assert KongContract.hostMatchAny(new URI("http://v1.changeme.gelato.io/123/abc?field=id"), trustedHosts)
-		//assert KongContract.hostMatchAny(new URI("v1.changeme.gelato.io/123/abc?field=id"), trustedHosts)
-
 
 
 		assert KongContract.hostMatchAny(new URI("https://changeme.auckland.ac.nz"), trustedHosts)
 		assert KongContract.hostMatchAny(new URI("http://changeme.auckland.ac.nz"), trustedHosts)
-		//assert KongContract.hostMatchAny(new URI("changeme.auckland.ac.nz"), trustedHosts)
 
 		assert KongContract.hostMatchAny(new URI("https://auckland.ac.nz"), trustedHosts)
 		assert KongContract.hostMatchAny(new URI("http://auckland.ac.nz"), trustedHosts)
-		//assert KongContract.hostMatchAny(new URI("auckland.ac.nz"), trustedHosts)
 
 		assert KongContract.hostMatchAny(new URI("https://v1.changeme.auckland.ac.nz"), trustedHosts)
 		assert KongContract.hostMatchAny(new URI("http://v1.changeme.auckland.ac.nz"), trustedHosts)
-		//assert KongContract.hostMatchAny(new URI("v1.changeme.auckland.ac.nz"), trustedHosts)
 
 		assert KongContract.hostMatchAny(new URI("https://changeme.auckland.ac.nz/123/abc?field=id"), trustedHosts)
 		assert KongContract.hostMatchAny(new URI("http://changeme.auckland.ac.nz/123/abc?field=id"), trustedHosts)
-		//assert KongContract.hostMatchAny(new URI("changeme.auckland.ac.nz"), trustedHosts)
 
 		assert KongContract.hostMatchAny(new URI("https://auckland.ac.nz/123/abc?field=id"), trustedHosts)
 		assert KongContract.hostMatchAny(new URI("http://auckland.ac.nz/123/abc?field=id"), trustedHosts)
-		//assert KongContract.hostMatchAny(new URI("auckland.ac.nz/123/abc?field=id"), trustedHosts)
 
 		assert KongContract.hostMatchAny(new URI("https://v1.changeme.auckland.ac.nz/123/abc?field=id"), trustedHosts)
 		assert KongContract.hostMatchAny(new URI("http://v1.changeme.auckland.ac.nz/123/abc?field=id"), trustedHosts)
-		//assert KongContract.hostMatchAny(new URI("v1.changeme.auckland.ac.nz/123/abc?field=id"), trustedHosts)
 	}
 
 	@Test
@@ -152,4 +139,38 @@ class UtilsTest {
 		assert !KongContract.hostMatch(probe, new URI("http://oops.dev.auckland.ac.nz/apply.dev.auckland.ac.nz"))
 	}
 
+
+	@Test
+	public void urlJoining() {
+		String base = "https://changeme.com"
+		assert KongContract.joinUrls(base, "") == base
+		assert KongContract.joinUrls(base, "/") == base+"/"
+		assert KongContract.joinUrls(base, "/admin/board") == base+"/admin/board"
+		assert KongContract.joinUrls(base, "/admin/board?quo=vadis") == base+"/admin/board?quo=vadis"
+
+		assert KongContract.joinUrls(base, "/admin", "board") == base+"/admin/board"
+		assert KongContract.joinUrls(base, "/admin/", "board") == base+"/admin/board"
+		assert KongContract.joinUrls(base, "/admin/", "/board") == base+"/admin/board"
+		assert KongContract.joinUrls(base, "/admin", "/board") == base+"/admin/board"
+		assert KongContract.joinUrls(base, "admin/", "/board") == base+"/admin/board"
+		assert KongContract.joinUrls(base, "admin/", "board") == base+"/admin/board"
+		assert KongContract.joinUrls(base, "admin", "board") == base+"/admin/board"
+		assert KongContract.joinUrls(base, "admin", "/board") == base+"/admin/board"
+
+		base = "https://changeme.com/"
+		assert KongContract.joinUrls(base, "") == base
+		assert KongContract.joinUrls(base, "/") == base
+		assert KongContract.joinUrls(base, "/admin/board") == base+"admin/board"
+		assert KongContract.joinUrls(base, "/admin/board?quo=vadis") == base+"admin/board?quo=vadis"
+
+		assert KongContract.joinUrls(base, "/admin", "board") == base+"admin/board"
+		assert KongContract.joinUrls(base, "/admin/", "board") == base+"admin/board"
+		assert KongContract.joinUrls(base, "/admin/", "/board") == base+"admin/board"
+		assert KongContract.joinUrls(base, "/admin", "/board") == base+"admin/board"
+		assert KongContract.joinUrls(base, "admin/", "/board") == base+"admin/board"
+		assert KongContract.joinUrls(base, "admin/", "board") == base+"admin/board"
+		assert KongContract.joinUrls(base, "admin", "board") == base+"admin/board"
+		assert KongContract.joinUrls(base, "admin", "/board") == base+"admin/board"
+
+	}
 }

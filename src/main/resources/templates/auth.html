@@ -67,7 +67,7 @@
 				<p>
 					<span class="texthighlight" th:text="${appname}"></span>
 					would like to have authorization to access your data or call services on your behalf.
-					Do you allow? You will be redirected to <span class="urlhighlight" th:text="${appurl}"></span>
+					Do you allow? You will be redirected to <span class="urlhighlight" th:text="${apphost}" th:title="${appurl}"></span>
 				</p>
 
 				<div class="alert alert-warning" role="alert" th:if="${! #strings.isEmpty(clientWarning)}">

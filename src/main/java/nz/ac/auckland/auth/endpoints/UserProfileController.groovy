@@ -1,8 +1,8 @@
 package nz.ac.auckland.auth.endpoints
 
 import nz.ac.auckland.auth.contract.KongContract
-import nz.ac.auckland.auth.formdata.ClientInfo
-import org.springframework.beans.factory.annotation.Value
+import nz.ac.auckland.auth.contract.ClientInfo
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.RequestHeader
@@ -11,16 +11,8 @@ import org.springframework.web.bind.annotation.RequestMapping
 @Controller
 class UserProfileController {
 
-
-	@Value('${kong.admin.url}')
-	private String kongAdminUrl = "https://admin.api.dev.auckland.ac.nz/";
-
-	@Value('${kong.proxy.url}')
-	private String kongProxyUrl = "https://proxy.api.dev.auckland.ac.nz";
-
-	@Value('${kong.admin.key}')
-	private String kongAdminKey = "none";
-
+	@Autowired
+	KongContract kong
 
 	@RequestMapping("/self")
 	public String authForm(@RequestHeader(value = "REMOTE_USER", defaultValue = "iben883") String userId,
@@ -53,7 +45,7 @@ class UserProfileController {
 			token.expiresHint = new Date(expires).format("HH:mm:ss")
 			String appId = token.credential_id
 			if (!(apps[appId])) {
-				ClientInfo ci = getClientInfo(appId)
+				ClientInfo ci = kong.getClientFromCredentialsId(appId)
 				if (ci)
 					apps.put(appId, ci)
 			}
@@ -65,21 +57,7 @@ class UserProfileController {
 	}
 
 	private Map getTokens(String userId){
-		return KongContract.getMap(KongContract.listUserTokensQuery(kongAdminUrl, userId), kongAdminKey)
-	}
-
-	private ClientInfo getClientInfo(String credentialsId){
-		ClientInfo result = new ClientInfo()
-
-		Map map = KongContract.getMap(KongContract.oauth2ClientQueryById(kongAdminUrl,credentialsId), kongAdminKey)
-
-		if (map && ClientInfo.loadFromClientResponse(map, result)){
-			map = KongContract.getMap(KongContract.joinUrl(kongAdminUrl, "/consumers/${result.consumerId}/acls"), kongAdminKey);
-			ClientInfo.loadFromConsumerResponse(map, result)
-			return result
-		}else
-			return null
-
+		return kong.getMap(kong.listUserTokensQuery(userId))
 	}
 
 }
