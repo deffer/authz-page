@@ -147,10 +147,11 @@ public class AuthorizationController {
 
 		// fetch api url and oauth2 provision key for given api
 		ApiInfo apiInfo = getApiInfo(apiId);
-		ClientInfo clientInfo = getClientInfo(authRequest.client_id)
+		ClientInfo clientInfo = kong.getClientInfo(authRequest.client_id)
 
 		if ( (!clientInfo) || (!apiInfo) || !(apiInfo.provisionKey)){
 			// todo show error page
+			// if apiInfo is available but provisionKey is empty, also log it as Kong configuration error
 			println("Not found: clientInfo="+clientInfo?.toString()+"  apiInfo="+apiInfo?.toString()+"  provisionKey="+apiInfo?.provisionKey)
 			model.addAttribute("user_id", userId);
 			model.addAttribute("map", authRequest);
