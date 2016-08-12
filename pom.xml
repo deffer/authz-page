@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>nz.ac.auckland.auth</groupId>
 	<artifactId>authz-page</artifactId>
-	<version>0.0.4-SNAPSHOT</version>
+	<version>0.0.4</version>
 	<packaging>jar</packaging>
 
 	<name>authz-page</name>
@@ -15,7 +14,7 @@
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>1.3.0.RELEASE</version>
-		<relativePath/>
+		<relativePath />
 		<!-- lookup parent from repository -->
 	</parent>
 
@@ -23,7 +22,7 @@
 		<url>https://stash.auckland.ac.nz/projects/IAPI/repos/authorization-server-oauth2/browse</url>
 		<connection>scm:git:git@stash.auckland.ac.nz/iapi/authorization-server-oauth2.git</connection>
 		<developerConnection>scm:git:git@stash.auckland.ac.nz/iapi/authorization-server-oauth2.git</developerConnection>
-		<tag>HEAD</tag>
+		<tag>authz-page-0.0.4</tag>
 	</scm>
 
 	<distributionManagement>
