@@ -44,7 +44,8 @@ unzip %{SOURCE0} %{name}.service %{name}.initd -d AppScripts
 rm -rf %{buildroot}
 
 # Create directories
-mkdir -p %{buildroot}/etc/init.d
+mkdir -p %{buildroot}/opt/%{name}
+mkdir -p %{buildroot}/usr/lib/systemd/system
 mkdir -p %{buildroot}/etc/%{name}
 mkdir -p %{buildroot}/var/lib/%{name}/tmp
 mkdir -p %{buildroot}/var/log/%{name}
@@ -98,3 +99,4 @@ if [ $1 -eq 2 ] ; then
   # Package upgrade
   # /sbin/service authserver restart
 fi
+
