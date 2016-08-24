@@ -4,7 +4,7 @@
 
 	<groupId>nz.ac.auckland.auth</groupId>
 	<artifactId>authz-page</artifactId>
-	<version>0.0.5</version>
+	<version>0.0.6-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>authz-page</name>
@@ -22,7 +22,7 @@
 		<url>https://stash.auckland.ac.nz/projects/IAPI/repos/authorization-server-oauth2/browse</url>
 		<connection>scm:git:git@stash.auckland.ac.nz/iapi/authorization-server-oauth2.git</connection>
 		<developerConnection>scm:git:git@stash.auckland.ac.nz/iapi/authorization-server-oauth2.git</developerConnection>
-		<tag>authz-page-0.0.5</tag>
+		<tag>HEAD</tag>
 	</scm>
 
 	<distributionManagement>
