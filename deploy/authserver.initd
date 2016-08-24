@@ -1,0 +1,93 @@
+#!/bin/sh
+#
+# Java process
+#
+# chkconfig: 2345 55 25
+# description: Java process
+
+# Source function library.
+. /etc/rc.d/init.d/functions
+
+prog="$(basename $0)"
+
+user=$prog
+killdelay=15
+
+JAVA_HOME=/usr/lib/jvm/java
+tmp=/var/lib/$prog/tmp
+app_jar="/usr/share/$prog.jar"
+console=/var/log/$prog/console.log
+lockfile=/var/lock/subsys/$prog
+pidfile=/var/run/$prog/$prog.pid
+
+java_opts="-server -Djava.io.tmpdir=$tmp"
+app_opts="--spring.config.location=file:/etc/$prog/application.properties"
+
+[ -e /etc/sysconfig/$prog ] && . /etc/sysconfig/$prog
+[ -e /etc/$prog/java.conf ] && . /etc/$prog/java.conf
+
+if [ -z "$exec" ]; then exec="$JAVA_HOME/bin/java $java_opts -jar $app_jar $app_opts"; fi
+
+start() {
+    echo -n $"Starting $prog:"
+    echo -n $"Starting $prog: $exec" >>$console
+    cd $tmp
+    daemon --pidfile=$pidfile --user=$user "$exec >>$console 2>&1 & echo \$! > $pidfile"
+    retval=$?
+    echo
+    [ $retval -eq 0 ] && touch $lockfile
+    return $retval
+}
+
+stop() {
+    echo -n $"Stopping $prog: "
+    killproc -p $pidfile -d $killdelay $prog
+    retval=$?
+    echo
+    [ $retval -eq 0 ] && rm -f $lockfile
+    return $retval
+}
+
+restart() {
+    stop
+    start
+}
+
+rh_status() {
+    # run checks to determine if the service is running or use generic status
+    status -p $pidfile $prog
+}
+
+rh_status_q() {
+    rh_status >/dev/null 2>&1
+}
+
+
+case "$1" in
+    start)
+        rh_status_q && exit 0
+        $1
+        ;;
+    stop)
+        rh_status_q || exit 0
+        $1
+        ;;
+    restart)
+        $1
+        ;;
+    reload)
+        rh_status_q || exit 7
+        $1
+        ;;
+    status)
+        rh_status
+        ;;
+    condrestart)
+        rh_status_q || exit 0
+        restart
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|status|restart|condrestart}"
+        exit 2
+esac
+exit $?

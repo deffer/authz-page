@@ -1,0 +1,12 @@
+[Unit]
+Description=OAuth2 Server - University of Auckland
+Documentation=https://wiki.auckland.ac.nz/display/APPLCTN/OAuth+Authorisation+Server
+
+[Service]
+Type=forking
+PIDFile=/var/run/authserver/authserver.pid
+ExecStart=/opt/authserver/authserver start
+ExecReload=/opt/authserver/authserver restart
+ExecStop=/opt/authserver/authserver stop
+PrivateTmp=true
+
