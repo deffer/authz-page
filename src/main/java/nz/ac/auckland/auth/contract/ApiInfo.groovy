@@ -1,6 +1,9 @@
 package nz.ac.auckland.auth.contract
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+
 // API info returned by Kong
+@JsonIgnoreProperties(ignoreUnknown = true)
 class ApiInfo {
 	// this is what is returned by making a call to http://localhost:8001/apis/pcfdev-oauth
 	/*
@@ -18,6 +21,7 @@ class ApiInfo {
 	String strip_request_path
 	String name
 	String created_at
+	String preserve_host
 
 	// will be populated after a call to oauth2 plugin
 	String provisionKey

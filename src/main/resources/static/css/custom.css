@@ -42,3 +42,11 @@ label {
     background-color: #f9f2f4;
     border-radius: 4px;
 }
+
+.jumbotron p {
+    font-size: 18px;
+}
+
+h2.media-heading {
+    margin-bottom: 30px;
+}

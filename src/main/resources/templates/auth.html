@@ -18,6 +18,8 @@
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css"
 	      integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous"/>
 
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css"/>
+
 	<script src="https://code.jquery.com/jquery-2.2.4.min.js"
 			integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
 			crossorigin="anonymous"></script>
@@ -62,8 +64,8 @@
 		<input type="hidden" th:field="*{scope}"/>
 		<input type="hidden" th:field="*{use_fragment}"/>
 		<div class="jumbotron" th:switch="${clientError}">
-			<h2>Authorize application</h2>
 			<div th:case="${null}">
+				<h2>Authorize application</h2>
 				<p>
 					<span class="texthighlight" th:text="${appname}"></span>
 					would like to have authorization to access your data or call services on your behalf.
@@ -109,26 +111,45 @@
 				</div>
 
 
-				<div class="flex-space-between margin-top-l">
-					<span class="btn-group btn-group-lg">
+				<div class="flex-space-between">
+					<span class="btn-group btn-group">
 						<button type="submit" class="btn btn-warning" name="actionDeny" value="Deny" >Deny</button>
 						<button type="submit" class="btn" name="actionDebug" value="Debug" title="Submit approval but dont redirect back, let me see the Kong's response first">Debug</button>
 					</span>
-					<button type="submit" class="btn btn-lg btn-success" value="Allow" name="actionAllow">Allow</button>
+					<button type="submit" class="btn btn btn-success" value="Allow" name="actionAllow">Allow</button>
 				</div>
 			</div>
 			<div th:case="noauth_api">
-				<p>Requested API access (OAuth2) is not supported with this API. There could be two reasons for seeing this error:
-					the client application you are using is outdated or our API is not configured properly. We have logged this issue
-					with our support team for investigation.</p>
+				<div class="media-left">
+					<i class="fa fa-hand-paper-o" style="font-size: 15em;" aria-hidden="true"></i>
+				</div>
+				<div class="media-body">
+					<h2 class="media-heading">Authorize application</h2>
+					<p>Requested API access (OAuth2) is not supported with this API. There could be two reasons for seeing this error:
+						the client application you are using is outdated or our API is not configured properly. We have logged this issue
+						with our support team for investigation.</p>
+				</div>
 			</div>
 			<div th:case="unknown_api">
-				<p>This is a request for unknown API. The link is broken or API was decommissioned. Please report this error to application developer</p>
+				<div class="media-left">
+					<i class="fa fa-question" style="font-size: 15em;" aria-hidden="true"></i>
+				</div>
+				<div class="media-body">
+					<h2 class="media-heading">Authorize application</h2>
+					<p>This is a request for unknown API. The link is broken or API was decommissioned. Please report this error to application developer</p>
+				</div>
 			</div>
 			<div th:case="unknown_client">
-				<p>Sorry, application sent you to this page is not registered with us. We blocked this request to keep you safe.</p>
+				<div class="media-left">
+					<i class="fa fa-frown-o" style="font-size: 15em;" aria-hidden="true"></i>
+				</div>
+				<div class="media-body">
+					<h2 class="media-heading">Authorize application</h2>
+					<p>Sorry, application sent you to this page is not registered with us. We blocked this request to keep you safe.</p>
+				</div>
 			</div>
 			<div th:case="callback_match">
+				<h2>Authorize application</h2>
 				<p>Unable to verify identity of the calling application - mismatched callback url. We blocked this request to keep you safe.
 				</p>
 				<div class="alert alert-danger" role="alert">

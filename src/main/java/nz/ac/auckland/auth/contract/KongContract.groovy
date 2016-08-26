@@ -1,12 +1,12 @@
 package nz.ac.auckland.auth.contract
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import groovyx.net.http.ContentType
 import groovyx.net.http.HTTPBuilder
 import groovyx.net.http.Method
 import nz.ac.auckland.auth.formdata.AuthRequest
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
-import org.springframework.web.client.RestTemplate
 
 @Service
 class KongContract {
@@ -110,6 +110,18 @@ class KongContract {
 		return false;
 	}
 
+	// copied from stackoverflow
+	public static Map<String, String> splitQuery(String query) throws UnsupportedEncodingException {
+		Map<String, String> query_pairs = new LinkedHashMap<String, String>();
+		if (!query)
+			return query_pairs
+		String[] pairs = query.split("&");
+		for (String pair : pairs) {
+			int idx = pair.indexOf("=");
+			query_pairs.put(URLDecoder.decode(pair.substring(0, idx), "UTF-8"), URLDecoder.decode(pair.substring(idx + 1), "UTF-8"));
+		}
+		return query_pairs;
+	}
 
 	// beware of possible DDOS by requesting random scopes.
 	//   option is to load all scopes in memory and ignore requests for unknown scopes
@@ -206,6 +218,69 @@ class KongContract {
 			return result
 		}else
 			return null
+	}
+
+
+	ApiInfo getApiInfo(String apiId){
+		final ObjectMapper mapper = new ObjectMapper();
+		ApiInfo result = mapper.convertValue(getMap(apiInfoQuery(apiId)), ApiInfo.class)
+		Map pluginInfo = getMap(listApiPluginsQuery(apiId))
+		pluginInfo?.data?.each { plugin ->
+			if (plugin.name == "oauth2") {
+				result.provisionKey = plugin.config.provision_key;
+				result.scopes = plugin.config.scopes
+			}
+		}
+		return result;
+	}
+
+	Map submitAuthorization(String authenticatedUserId, String redirectUri, ApiInfo apiInfo, AuthRequest authRequest) {
+		/*$ curl https://your.api.com/oauth2/authorize \
+			--header "Authorization: Basic czZCaGRSa3F0MzpnWDFmQmF0M2JW" \
+			--data "client_id=XXX" \
+			--data "response_type=XXX" \
+			--data "scope=XXX" \
+			--data "provision_key=XXX" \
+			--data "authenticated_userid=XXX"
+		*/
+
+		// todo when Mashape fixes the error with redirectUri, use the one passed in here
+
+		String submitTo = authorizeUrl(apiInfo.request_path)
+
+		Map result = [:]
+		String scopes = ""
+		if (authRequest.scope)
+			scopes = authRequest.scope.replaceAll(',', ' ')
+
+		// perform a POST request, expecting JSON response (redirect url)
+		def http = new HTTPBuilder(submitTo)
+		println "Calling ${http.uri} with scopes $scopes and user $authenticatedUserId"
+		http.request(Method.POST, ContentType.JSON) {
+			requestContentType = ContentType.URLENC
+			body = [client_id: authRequest.client_id, response_type: authRequest.response_type,
+			        scope    : scopes, provision_key: apiInfo.provisionKey,
+			        authenticated_userid: authenticatedUserId] // MUST use authenticatedUserId of SSO user
+
+			if (kongAdminKey && kongAdminKey!="none")
+				headers = [apikey: kongAdminKey]
+
+
+			// response handler for a success response code
+			response.success = handler.rcurry({resp, reader->
+				result.put("status", resp.status)
+				if (reader instanceof Map)
+					result.putAll(reader)
+			})
+			response.failure = handler.rcurry({resp, reader->
+				result.put("status", resp.status)
+				if (reader instanceof Map)
+					result.putAll(reader)
+
+				println "ERROR:\r$reader"
+			})
+		}
+		return result
 	}
 
 }

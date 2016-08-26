@@ -1,8 +1,6 @@
 package nz.ac.auckland.auth.endpoints
 
-import groovyx.net.http.ContentType
-import groovyx.net.http.HTTPBuilder
-import groovyx.net.http.Method
+
 import nz.ac.auckland.auth.contract.KongContract
 import nz.ac.auckland.auth.contract.ApiInfo;
 import nz.ac.auckland.auth.formdata.AuthRequest
@@ -15,7 +13,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod
-import org.springframework.web.client.RestTemplate
+
 
 
 @Controller
@@ -24,7 +22,8 @@ import org.springframework.web.client.RestTemplate
 // do NOT enable CORS on any of these method
 public class AuthorizationController {
 
-	// options for response_type when calling oauth/authorize endpoint
+	// options for response_type when calling oauth/authorize endpoint.
+	// WARNING: these values are also referenced in the property file
 	public static final String AUTHORIZE_CODE_FLOW = "code"
 	public static final String AUTHORIZE_IMPLICIT_FLOW = "token"
 
@@ -33,6 +32,10 @@ public class AuthorizationController {
 
 	@Value('${as.trustedRedirectHosts}')
 	private String[] trustedRedirectHosts
+
+	@Value('${as.autogrant.flows}')
+	private String[] autoGrantFlowsAllowed = ["token"]
+
 
 	@Autowired
 	KongContract kong
@@ -65,8 +68,11 @@ public class AuthorizationController {
 		String displayName = userName != "NULL"? userName :  "Unknown (${authRequest.user_id})"
 		model.addAttribute("name", displayName);
 
-		ApiInfo apiInfo = getApiInfo(apiId)
-		if (!apiInfo){
+		// pass request input values to the view in hidden fields
+		model.addAttribute("map", authRequest);
+
+		ApiInfo apiInfo = kong.getApiInfo(apiId)
+		if ((!apiInfo) || !(apiInfo.id)){
 			model.addAttribute("clientError", "unknown_api")
 			return "auth";
 		}
@@ -79,17 +85,14 @@ public class AuthorizationController {
 		List<String> validScopes = processScopes(authRequest, apiInfo, model)
 		authRequest.scope = validScopes.join(" ")
 
-		// pass request input values to the view in hidden fields
-		model.addAttribute("map", authRequest);
 
 		// find out application and consumer details
 		ClientInfo clientInfo = kong.getClientInfo(authRequest.client_id)
 		if (clientInfo){
-			if (clientInfo.groups.contains(KongContract.GROUP_AUTH_GRANTED) && authRequest.response_type==AUTHORIZE_IMPLICIT_FLOW){
+			if (isOkToAutoGrant(clientInfo, authRequest)){
 				// that's our internal university client application.
 				// we trust it (and so does the user) as long as the app location is registered and not overridden in request
-				Map kongResponse = submitAuthorization(userId, clientInfo.redirectUri,
-						kong.authorizeUrl(apiInfo.request_path), apiInfo.provisionKey, authRequest);
+				Map kongResponse = kong.submitAuthorization(userId, clientInfo.redirectUri,apiInfo, authRequest);
 				return makeCallback(kongResponse, authRequest, clientInfo, model, null) // null - do NOT override callbackUri
 			}
 
@@ -113,8 +116,19 @@ public class AuthorizationController {
 
 	boolean sanitizeRequestParameters(AuthRequest authRequest, String userId, Model model) {
 		// todo if userId is NULL, show error (user is not authenticated, SSO failed??)
-		authRequest.client_id = sanitize(authRequest.client_id) ?: "irina_oauth2_pluto";
-		authRequest.response_type = sanitize(authRequest.response_type) ?: AUTHORIZE_CODE_FLOW;
+		// do we need to sanitize redirect_uri? its always passed through URI constructor which should do it for us
+		if (validateId(authRequest.client_id)){
+			model.addAttribute("Invalid client_id")
+			return false
+		}
+
+		//authRequest.client_id = sanitize(authRequest.client_id) ?: "irina_oauth2_pluto";
+		authRequest.response_type = authRequest.response_type?authRequest.response_type.toLowerCase():""
+		if (!(authRequest.response_type in [AUTHORIZE_CODE_FLOW,AUTHORIZE_IMPLICIT_FLOW])){
+			// warning may be???
+			authRequest.response_type = AUTHORIZE_CODE_FLOW
+		}
+
 		if ((!userId) || userId=="NULL"){
 			if (!debug){
 				model.addAttribute("Unexpected error (SSO fail)")
@@ -128,11 +142,11 @@ public class AuthorizationController {
 		return true
 	}
 
-	// never trust any data that didnt come from trusted services
-	private String sanitize(String input) {
-		// implement
-		return input;
+
+	private boolean validateId(String input){
+		return input && (input ==~ /[a-zA-Z0-9\-_]$/)
 	}
+
 
 	// https://spring.io/guides/gs/handling-form-submission/
 	@RequestMapping(value = "/{api_id}/auth/submit", method = RequestMethod.POST)
@@ -146,10 +160,10 @@ public class AuthorizationController {
 		String forUser = (authRequest.user_id && debug)?authRequest.user_id : userId
 
 		// fetch api url and oauth2 provision key for given api
-		ApiInfo apiInfo = getApiInfo(apiId);
+		ApiInfo apiInfo = kong.getApiInfo(apiId);
 		ClientInfo clientInfo = kong.getClientInfo(authRequest.client_id)
 
-		if ( (!clientInfo) || (!apiInfo) || !(apiInfo.provisionKey)){
+		if ( (!clientInfo) || (!apiInfo) || (!(apiInfo.id)) || !(apiInfo.provisionKey)){
 			// todo show error page
 			// if apiInfo is available but provisionKey is empty, also log it as Kong configuration error
 			println("Not found: clientInfo="+clientInfo?.toString()+"  apiInfo="+apiInfo?.toString()+"  provisionKey="+apiInfo?.provisionKey)
@@ -175,14 +189,13 @@ public class AuthorizationController {
 		String redirectUri = authRequest.redirect_uri
 
 		// now we need to inform Kong that user authenticatedUserId grants authorization to application cliend_id
-		String submitTo = kong.authorizeUrl(apiInfo.request_path)
-		Map kongResponseObj = submitAuthorization(forUser, redirectUri, submitTo, apiInfo.provisionKey, authRequest);
+		Map kongResponseObj = kong.submitAuthorization(forUser, redirectUri, apiInfo, authRequest);
 
 		if (authRequest.actionDebug || !(kongResponseObj.redirect_uri)) {
 			model.addAttribute("user_id", userId);
 			model.addAttribute("map", authRequest);
 			model.addAttribute("provision_key", apiInfo.provisionKey);
-			model.addAttribute("submitTo", submitTo);
+			model.addAttribute("submitTo", kong.authorizeUrl(apiInfo.request_path));
 			model.addAttribute("kongResponse", kongResponseObj.toString());
 
 			return "temp";
@@ -190,6 +203,11 @@ public class AuthorizationController {
 			String overrideCallback = authRequest.redirect_uri != clientInfo.redirectUri? authRequest.redirect_uri:null;
 			return makeCallback(kongResponseObj, authRequest, clientInfo, model, overrideCallback)
 		}
+	}
+
+	private boolean isOkToAutoGrant(ClientInfo clientInfo, AuthRequest authRequest){
+		return (clientInfo.groups.contains(KongContract.GROUP_AUTH_GRANTED) &&
+				Arrays.asList(autoGrantFlowsAllowed).contains(authRequest.response_type))
 	}
 
 	/**
@@ -257,7 +275,7 @@ public class AuthorizationController {
 		String kongResponse = kongResponseObject.redirect_uri
 
 		URI uri = new URI(kongResponse)
-		Map<String, String> params = splitQuery(uri.query)
+		Map<String, String> params = KongContract.splitQuery(uri.query)
 
 		// add state parameter if requested
 		if (authRequest.state && !params.containsKey("state")) {
@@ -283,93 +301,6 @@ public class AuthorizationController {
 		return "redirect:" + kongResponse
 	}
 
-	// common closure to print http response
-	def printResponse = {resp, reader ->
-		println "Response status: ${resp.statusLine}"
-		println 'Headers: -----------'
-		resp.headers.each { h ->
-			println " ${h.name} : ${h.value}"
-		}
-		println 'Response data: -----'
-		println reader
-		println '--------------------'
-	}
-
-	// copied from stackoverflow
-	public static Map<String, String> splitQuery(String query) throws UnsupportedEncodingException {
-		Map<String, String> query_pairs = new LinkedHashMap<String, String>();
-		if (!query)
-			return query_pairs
-		String[] pairs = query.split("&");
-		for (String pair : pairs) {
-			int idx = pair.indexOf("=");
-			query_pairs.put(URLDecoder.decode(pair.substring(0, idx), "UTF-8"), URLDecoder.decode(pair.substring(idx + 1), "UTF-8"));
-		}
-		return query_pairs;
-	}
-
-	private ApiInfo getApiInfo(String apiId){
-		try {
-			RestTemplate rest = new RestTemplate();
-			ApiInfo apiInfo = rest.getForObject(kong.apiInfoQuery(apiId), ApiInfo.class);
-			Map pluginInfo = rest.getForObject(kong.listApiPluginsQuery(apiId), Map.class);
-			pluginInfo?.data?.each { plugin ->
-				if (plugin.name == "oauth2") {
-					apiInfo.provisionKey = plugin.config.provision_key;
-					apiInfo.scopes = plugin.config.scopes
-				}
-			}
-			return apiInfo
-		}catch (Exception e){
-			e.printStackTrace()
-			return null;
-		}
-	}
-	private Map submitAuthorization(String authenticatedUserId, String redirectUri,
-	                                   String submitTo, String provisionKey, AuthRequest authRequest) {
-		/*$ curl https://your.api.com/oauth2/authorize \
-			--header "Authorization: Basic czZCaGRSa3F0MzpnWDFmQmF0M2JW" \
-			--data "client_id=XXX" \
-			--data "response_type=XXX" \
-			--data "scope=XXX" \
-			--data "provision_key=XXX" \
-			--data "authenticated_userid=XXX"
-		*/
-
-		// todo when Mashape fixes the error with redirectUri, use the one passed in here
-
-		Map result = [:]
-		String scopes = ""
-		if (authRequest.scope)
-			scopes = authRequest.scope.replaceAll(',', ' ')
-
-		// perform a POST request, expecting JSON response (redirect url)
-		def http = new HTTPBuilder(submitTo)
-		println "Calling ${http.uri} with scopes $scopes and user $authenticatedUserId"
-		http.request(Method.POST, ContentType.JSON) {
-			requestContentType = ContentType.URLENC
-			body = [client_id: authRequest.client_id, response_type: authRequest.response_type,
-			        scope    : scopes, provision_key: provisionKey,
-			        authenticated_userid: authenticatedUserId] // MUST use authenticatedUserId of SSO user
-
-			// response handler for a success response code
-			response.success = { resp, reader ->
-				result.put("status", resp.status)
-				if (reader instanceof Map)
-					result.putAll(reader)
-				else
-					printResponse(resp, reader)
-
-			}
-			response.failure = { resp, reader ->
-				result.put("status", resp.status)
-				if (reader instanceof Map)
-					result.putAll(reader)
-				printResponse(resp, reader)
-			}
-		}
-		return result
-	}
 
 	public String authDeny(AuthRequest authRequest, Model model) {
 		ClientInfo clientInfo = kong.getClientInfo(authRequest.client_id)
