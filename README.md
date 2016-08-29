@@ -20,9 +20,9 @@ Some features specific to University include:
 
     mvn package
 
-## Running (deploying)
+## Running manually
 
-Configure properties (following example in `src/main/resources/application.properties`) ans place it in a working folder. Run
+Configure properties (following example in `src/main/resources/application.properties`) and place it in a working folder. Run
 
     nohup java -jar authz-page-xx.jar >as.out 2>&1 &
 
@@ -46,4 +46,28 @@ Please note, application.properties in the classpath take preference
 over as.properties from home folders. When building application,
 ensure all properties in application.properties are commented.
 
-Another note. Logging configuration must go into `application.properties` because for some reason if its in the additional properties (`as.properties`) it is ignored. 
+Another note. Logging configuration must go into `application.properties` because for some reason if its in the additional properties (`as.properties`) it is ignored.
+ 
+## Building rpm
+ 
+Following general instructions on how to package an app as rpm [here](https://wiki.auckland.ac.nz/display/GroupApps/Packaging+app+as+rpm), 
+place `authserver.spec` (which can be found in `deploy` folder) into `rpmbuild/SPECS` folder on your build server. Run
+ 
+    rpmbuild -ba -D "version 0.0.8" ./SPECS/authserver.spec
+    
+This will download the specified version of the jar from Nexus and package it as rpm.
+
+## Installing and running rpm
+
+Without uploading to ooa-apps-dev repo (because its usually not available), copy onto VM and install using yum
+ 
+    sudo yum localinstall authserver-0.0.8-1.noarch.rpm
+    
+All further upgrades to Auth Server can be done by simply copying new jar version into `/usr/share/authserver`.
+Logs can be found in `/var/log/authserver` and properties in `/etc/authserver/`.
+
+The application is installed as systemd service, to restart
+
+    sudo systemctl restart authserver
+    
+To change JVM properties or any other details of jar execution, look in the `/opt/authserver/authserver.initd`
