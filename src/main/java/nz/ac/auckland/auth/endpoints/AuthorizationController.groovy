@@ -17,8 +17,6 @@ import org.springframework.web.bind.annotation.RequestMethod
 
 
 @Controller
-// to do:  add csrf protection. to prevent user from unknowingly submitting approval by following specially crafted link
-//         (using POST should prevent it, but its better to have more protection in place)
 // do NOT enable CORS on any of these method
 public class AuthorizationController {
 
@@ -40,6 +38,7 @@ public class AuthorizationController {
 	@Autowired
 	KongContract kong
 
+	// http://localhost:8090/identity/oauth2/authorize?client_id=my_clientid&response_type=code&scope=identity-read,identity-write
 	@RequestMapping("/{api_id}/oauth2/authorize")
 	public String authForm(@RequestHeader(value = "REMOTE_USER", defaultValue = "NULL") String userId,
 	                       @RequestHeader(value = "displayName", defaultValue = "NULL") String userName,
@@ -49,16 +48,6 @@ public class AuthorizationController {
 	}
 
 	// http://localhost:8090/pcfdev-oauth/auth?client_id=irina_oauth2_pluto&response_type=code&scope=read,write
-	@Deprecated
-	@RequestMapping("/{api_id}/auth")
-	public String authFormDeprecated(
-			@RequestHeader(value = "REMOTE_USER", defaultValue = "NULL") String userId,
-			@RequestHeader(value = "displayName", defaultValue = "NULL") String userName,
-	        @PathVariable("api_id") String apiId, AuthRequest authRequest, Model model) {
-		return renderAuthForm(userId, userName, apiId, authRequest, model);
-	}
-
-
 	private String renderAuthForm(String userId, String userName, String apiId, AuthRequest authRequest, Model model){
 
 		if (!sanitizeRequestParameters(authRequest, userId, model))
@@ -118,11 +107,10 @@ public class AuthorizationController {
 		// todo if userId is NULL, show error (user is not authenticated, SSO failed??)
 		// do we need to sanitize redirect_uri? its always passed through URI constructor which should do it for us
 		if (validateId(authRequest.client_id)){
-			model.addAttribute("Invalid client_id")
+			model.addAttribute("tex", "Invalid client_id")
 			return false
 		}
 
-		//authRequest.client_id = sanitize(authRequest.client_id) ?: "irina_oauth2_pluto";
 		authRequest.response_type = authRequest.response_type?authRequest.response_type.toLowerCase():""
 		if (!(authRequest.response_type in [AUTHORIZE_CODE_FLOW,AUTHORIZE_IMPLICIT_FLOW])){
 			// warning may be???
@@ -131,7 +119,7 @@ public class AuthorizationController {
 
 		if ((!userId) || userId=="NULL"){
 			if (!debug){
-				model.addAttribute("Unexpected error (SSO fail)")
+				model.addAttribute("text", "Unexpected error (SSO fail)")
 				return false
 			}else {
 				authRequest.user_id = "user";
