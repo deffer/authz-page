@@ -277,7 +277,7 @@ class KongContract {
 				if (reader instanceof Map)
 					result.putAll(reader)
 
-				println "ERROR:\r$reader"
+				println "ERROR: $reader"
 			})
 		}
 		return result

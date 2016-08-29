@@ -30,7 +30,6 @@ if [ -z "$exec" ]; then exec="$JAVA_HOME/bin/java $java_opts -jar $app_jar $app_
 
 start() {
     echo -n $"Starting $prog:"
-    echo -n $"Starting $prog: $exec" >>$console
     cd $tmp
     daemon --pidfile=$pidfile --user=$user "$exec >>$console 2>&1 & echo \$! > $pidfile"
     retval=$?
