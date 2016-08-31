@@ -4,10 +4,11 @@
 }
 
 .footer {
-    margin-top: 24px;
-    padding-top: 24px;
+    margin: 24px auto;
+    padding-top: 10px;
     color: #777;
     border-top: 1px solid #e5e5e5;
+    max-width: 1055px;
 }
 
 .margin-top-l {
@@ -49,4 +50,42 @@ label {
 
 h2.media-heading {
     margin-bottom: 30px;
+}
+
+#header {
+    max-width: 1055px;
+    margin: auto;
+    padding: 14px;
+    background-image: url(https://iam.auckland.ac.nz/static/82Kppr4O6Jp7ncyFnC6PZfOINFnty6JFXTr1CNIincN.png);
+}
+
+.swagger-ui-wrap {
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 906px;
+}
+
+#api_selector {
+    float: right;
+}
+
+#api_selector > div.input {
+    margin-top: 35px;
+    float: left;
+}
+
+#api_selector > div.greeting {
+    color: #fff;
+}
+
+#api_selector > div.control {
+    margin-left: 20px;
+}
+
+#api_selector > div.button {
+    width: 63px;
+}
+
+.media-left > i.fa {
+    font-size: 15em;
 }

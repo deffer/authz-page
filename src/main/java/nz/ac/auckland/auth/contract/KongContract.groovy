@@ -5,11 +5,16 @@ import groovyx.net.http.ContentType
 import groovyx.net.http.HTTPBuilder
 import groovyx.net.http.Method
 import nz.ac.auckland.auth.formdata.AuthRequest
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 
 @Service
 class KongContract {
+
+	private static final Logger logger = LoggerFactory.getLogger(KongContract.class);
+
 	public static final String GROUP_PRIVATE = "system-private"
 	public static final String GROUP_HASH_CLIENT = "system-hash-client"
 	public static final String GROUP_AUTH_GRANTED = "system-auth-granted"
@@ -133,12 +138,12 @@ class KongContract {
 		scopeName = scopeName.toLowerCase()
 		if (!scopesCache[scopeName]){
 			String url = joinUrls(kongProxyUrl, RES_SCOPES, scopeName)
-			println "Fetching scope $scopeName description from $url"
+			logger.info("Fetching scope $scopeName description from $url")
 			def result = getMap(url)
 			if (result.message){
 				scopesCache.put(scopeName, result.message)
 			}else{
-				println "ERROR: scope $scopeName description not found"
+				logger.error("ERROR: scope $scopeName description not found")
 				if (scopesFallback.get(scopeName))
 					scopesCache.put(scopeName, scopesFallback.get(scopeName))
 			}
@@ -147,17 +152,18 @@ class KongContract {
 	}
 
 	static def handler = {resp, reader, func ->
-		println "response status: ${resp.statusLine}"
+		def msg = "response status: ${resp.statusLine}\n"
 		if (resp.status !=200) {
-			println 'Headers: -----------'
+			msg += 'Headers: -----------\n'
 			resp.headers.each { h ->
-				println " ${h.name} : ${h.value}"
+				msg += " ${h.name} : ${h.value}\n"
 			}
-			println 'Response data: -----'
-			println reader
-			println '--------------------'
+			msg += 'Response data: -----\n'
+			msg += "$reader\n"
+			msg += '--------------------\n'
 		}
-		func(resp, reader);
+		logger.trace(msg)
+		func(resp, reader)
 	}
 
 	/**
@@ -170,7 +176,7 @@ class KongContract {
 	public Map getMap(String fullUrl){
 		Map map = [:]
 		def http = new HTTPBuilder(fullUrl)
-		println "Calling "+http.uri
+		logger.info("Calling "+http.uri)
 		http.request(Method.GET, ContentType.JSON) {
 			requestContentType = ContentType.JSON
 			//body = queryData
@@ -182,7 +188,7 @@ class KongContract {
 					map = reader
 			})
 			response.failure = handler.rcurry({resp, reader->
-				println "ERROR:\r$reader"
+				logger.error(reader)
 			})
 		}
 
@@ -255,7 +261,7 @@ class KongContract {
 
 		// perform a POST request, expecting JSON response (redirect url)
 		def http = new HTTPBuilder(submitTo)
-		println "Calling ${http.uri} with scopes $scopes and user $authenticatedUserId"
+		logger.info("Calling ${http.uri} with scopes $scopes and user $authenticatedUserId")
 		http.request(Method.POST, ContentType.JSON) {
 			requestContentType = ContentType.URLENC
 			body = [client_id: authRequest.client_id, response_type: authRequest.response_type,
@@ -277,7 +283,7 @@ class KongContract {
 				if (reader instanceof Map)
 					result.putAll(reader)
 
-				println "ERROR: $reader"
+				logger.error(reader)
 			})
 		}
 		return result

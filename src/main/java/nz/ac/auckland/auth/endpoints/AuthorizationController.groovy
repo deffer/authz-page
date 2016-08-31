@@ -5,6 +5,8 @@ import nz.ac.auckland.auth.contract.KongContract
 import nz.ac.auckland.auth.contract.ApiInfo;
 import nz.ac.auckland.auth.formdata.AuthRequest
 import nz.ac.auckland.auth.contract.ClientInfo
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Controller;
@@ -34,6 +36,7 @@ public class AuthorizationController {
 	@Value('${as.autogrant.flows}')
 	private String[] autoGrantFlowsAllowed = ["token"]
 
+	private static final Logger logger = LoggerFactory.getLogger(AuthorizationController.class);
 
 	@Autowired
 	KongContract kong
@@ -50,9 +53,10 @@ public class AuthorizationController {
 	// http://localhost:8090/pcfdev-oauth/auth?client_id=irina_oauth2_pluto&response_type=code&scope=read,write
 	private String renderAuthForm(String userId, String userName, String apiId, AuthRequest authRequest, Model model){
 
-		if (!sanitizeRequestParameters(authRequest, userId, model))
-			return "generic_response" // todo show ERROR page
-
+		if (!sanitizeRequestParameters(authRequest, userId, model)) {
+			logger.warn(model.text)
+			return "uoa-error"
+		}
 		// defined greetings value
 		String displayName = userName != "NULL"? userName :  "Unknown (${authRequest.user_id})"
 		model.addAttribute("name", displayName);
@@ -106,8 +110,8 @@ public class AuthorizationController {
 	boolean sanitizeRequestParameters(AuthRequest authRequest, String userId, Model model) {
 		// todo if userId is NULL, show error (user is not authenticated, SSO failed??)
 		// do we need to sanitize redirect_uri? its always passed through URI constructor which should do it for us
-		if (validateId(authRequest.client_id)){
-			model.addAttribute("tex", "Invalid client_id")
+		if (!validateId(authRequest.client_id)){
+			model.addAttribute("text", "Invalid client_id")
 			return false
 		}
 
@@ -132,7 +136,7 @@ public class AuthorizationController {
 
 
 	private boolean validateId(String input){
-		return input && (input ==~ /[a-zA-Z0-9\-_]$/)
+		return input && (input ==~ /[a-zA-Z0-9\-_]+$/)
 	}
 
 
@@ -154,11 +158,11 @@ public class AuthorizationController {
 		if ( (!clientInfo) || (!apiInfo) || (!(apiInfo.id)) || !(apiInfo.provisionKey)){
 			// todo show error page
 			// if apiInfo is available but provisionKey is empty, also log it as Kong configuration error
-			println("Not found: clientInfo="+clientInfo?.toString()+"  apiInfo="+apiInfo?.toString()+"  provisionKey="+apiInfo?.provisionKey)
+			logger.warn("Not found: clientInfo="+clientInfo?.toString()+"  apiInfo="+apiInfo?.toString()+"  provisionKey="+apiInfo?.provisionKey)
 			model.addAttribute("user_id", userId);
 			model.addAttribute("map", authRequest);
 			model.addAttribute("provision_key", apiInfo?.provisionKey);
-			return "temp";
+			return "uoa-error";
 		}
 
 		// if different redirectUri is passed, check whether it is allowed for this client. i.e.
@@ -166,11 +170,11 @@ public class AuthorizationController {
 		//     && !clientInfo.groups.contains(KongContract.GROUP_DYNAMIC_CLIENT)){
 		if (!isOkToRedirect(authRequest, clientInfo, model)){
 			// todo show error page
-			println("Mismatched callback uri: passed '${authRequest.redirect_uri}' expected '${clientInfo.redirectUri}'")
+			logger.warn("Mismatched callback uri: passed '${authRequest.redirect_uri}' expected '${clientInfo.redirectUri}'")
 			model.addAttribute("user_id", userId);
 			model.addAttribute("map", authRequest);
 			model.addAttribute("provision_key", apiInfo.provisionKey);
-			return "temp";
+			return "uoa-error";
 		}
 
 		// if redirectUri is overridden and it is allowed, set it here
@@ -179,7 +183,7 @@ public class AuthorizationController {
 		// now we need to inform Kong that user authenticatedUserId grants authorization to application cliend_id
 		Map kongResponseObj = kong.submitAuthorization(forUser, redirectUri, apiInfo, authRequest);
 
-		if (authRequest.actionDebug || !(kongResponseObj.redirect_uri)) {
+		if (authRequest.actionDebug) {
 			model.addAttribute("user_id", userId);
 			model.addAttribute("map", authRequest);
 			model.addAttribute("provision_key", apiInfo.provisionKey);
@@ -187,6 +191,15 @@ public class AuthorizationController {
 			model.addAttribute("kongResponse", kongResponseObj.toString());
 
 			return "temp";
+		} else if(!(kongResponseObj.redirect_uri)) {
+			//todo change to log.warn
+
+			model.addAttribute("user_id", userId);
+			model.addAttribute("provision_key", apiInfo.provisionKey);
+			model.addAttribute("submitTo", kong.authorizeUrl(apiInfo.request_path));
+			model.addAttribute("kongResponse", kongResponseObj.toString());
+
+			return "uoa-error";
 		} else {
 			String overrideCallback = authRequest.redirect_uri != clientInfo.redirectUri? authRequest.redirect_uri:null;
 			return makeCallback(kongResponseObj, authRequest, clientInfo, model, overrideCallback)

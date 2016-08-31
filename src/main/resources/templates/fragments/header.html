@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="header(name)" id='header'>
+    <div class="swagger-ui-wrap">
+        <a href="/">
+            <img alt="UoA" src="https://iam.auckland.ac.nz/static/7wjBIGzZfYiiBJ9LBDmme95ZVv9LqSFXfCSS35S9yto.jpg" data-aui-responsive-header-index="0"/>
+        </a>
+        <form id="api_selector">
+            <div class="input greeting">
+                <span th:text="'Hello, ' + ${name} + '!'"></span>
+            </div>
+            <div class="input control">
+                <input placeholder="Managing trusted apps" id="inputSearchTerm" name="inputSearch" type="text"/>
+            </div>
+            <div class="input control button">
+                <input type="button" id="explore" value="Help"/>
+            </div>
+        </form>
+    </div>
+</div>
+</body>
+</html>

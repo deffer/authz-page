@@ -1,205 +1,143 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
-	<meta charset="utf-8"/>
-	<meta http-equiv="X-UA-Compatible" content="IE=edge"/>
-	<meta name="viewport" content="width=device-width, initial-scale=1"/>
-	<!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
-	<title>University of Auckland APIs - Client Authorization request</title>
-
-	<!-- Bootstrap -->
-	<!--link href="css/bootstrap.min.css" rel="stylesheet"-->
-
-	<!-- Latest compiled and minified CSS -->
-	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"
-	      integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous"/>
-
-	<!-- Optional theme -->
-	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css"
-	      integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous"/>
-
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css"/>
-
-	<script src="https://code.jquery.com/jquery-2.2.4.min.js"
-			integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
-			crossorigin="anonymous"></script>
-	<!-- Latest compiled and minified JavaScript -->
-	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"
-	        integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS"
-	        crossorigin="anonymous"></script>
-
-	<!-- Custom styles for this template -->
-	<link href="/static/css/custom.css" rel="stylesheet"/>
-
-	<!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
-	<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
-	<!--[if lt IE 9]>
-	<script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
-	<script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
-	<![endif]-->
-</head>
-
+<head th:replace="fragments/head :: head"></head>
 <body>
-<div id='header' style="max-width:1055px; margin:auto; padding: 14px; background-image: url(https://iam.auckland.ac.nz/static/82Kppr4O6Jp7ncyFnC6PZfOINFnty6JFXTr1CNIincN.png);">
-	<div class="swagger-ui-wrap" style="margin-left: auto; margin-right:auto;max-width: 906px;">
-		<a href="/">
-			<img alt="UoA" src="https://iam.auckland.ac.nz/static/7wjBIGzZfYiiBJ9LBDmme95ZVv9LqSFXfCSS35S9yto.jpg" data-aui-responsive-header-index="0"/>
-		</a>
-		<form id='api_selector' style="float:right;">
-			<div class='input' style="margin-top: 35px; float: left; color: #fff;"><span th:text="'Hello, ' + ${name} + '!'"></span></div>
-			<div class='input' style="margin-top: 35px; margin-left: 20px; float: left;"><input placeholder="Authorizing application" id="inputSearchTerm" name="inputSearch" type="text"/></div>
-			<div class='input' style="margin-top: 35px; margin-left: 20px; width: 63px; float:left;" ><input type="button" id="explore" value="Help"/></div>
-		</form>
-	</div>
-</div>
+	<div th:replace="fragments/header :: header (name=${name})"></div>
 
-<div class="container">
-	<div class="header"></div>
-	<form action="#" th:action="@{/{apid}/auth/submit(apid=${apiid})}" th:object="${map}" method="post">
-		<!-- original request parameters, to pass on Submit -->
-		<input type="hidden" th:field="*{client_id}"/>
-		<input type="hidden" th:field="*{response_type}"/>
-		<input type="hidden" th:field="*{redirect_uri}"/>
-		<input type="hidden" th:field="*{state}"/>
-		<input type="hidden" th:field="*{scope}"/>
-		<input type="hidden" th:field="*{use_fragment}"/>
-		<div class="jumbotron" th:switch="${clientError}">
-			<div th:case="${null}">
-				<h2>Authorize application</h2>
-				<p>
-					<span class="texthighlight" th:text="${appname}"></span>
-					would like to have authorization to access your data or call services on your behalf.
-					Do you allow? You will be redirected to <span class="urlhighlight" th:text="${apphost}" th:title="${appurl}"></span>
-				</p>
+	<div class="container">
+		<form action="#" th:action="@{/{apid}/auth/submit(apid=${apiid})}" th:object="${map}" method="post">
+			<!-- original request parameters, to pass on Submit -->
+			<input type="hidden" th:field="*{client_id}"/>
+			<input type="hidden" th:field="*{response_type}"/>
+			<input type="hidden" th:field="*{redirect_uri}"/>
+			<input type="hidden" th:field="*{state}"/>
+			<input type="hidden" th:field="*{scope}"/>
+			<input type="hidden" th:field="*{use_fragment}"/>
+			<div class="jumbotron" th:switch="${clientError}">
+				<div th:case="${null}">
+					<h2>Authorize application</h2>
+					<p>
+						<span class="texthighlight" th:text="${appname}"></span>
+						would like to have authorization to access your data or call services on your behalf.
+						Do you allow? You will be redirected to <span class="urlhighlight" th:text="${apphost}" th:title="${appurl}"></span>
+					</p>
 
-				<div class="alert alert-warning" role="alert" th:if="${! #strings.isEmpty(clientWarning)}">
-					This application was registered with a different callback <span class="urlhighlight" th:text="${clientWarning}"></span>.
-					Do not accept his request if you dont trust application which sent you here.
-				</div>
+					<div class="alert alert-warning" role="alert" th:if="${! #strings.isEmpty(clientWarning)}">
+						This application was registered with a different callback <span class="urlhighlight" th:text="${clientWarning}"></span>.
+						Do not accept his request if you dont trust application which sent you here.
+					</div>
 
-				<div th:unless="${! #strings.isEmpty(clientWarning)}" class="row">
-					<div class="well col-xs-8">
-						<p class="margin-bottom-s">Remember this decision:</p>
-						<div>
-							<label for="remember-forever">
-								<input type="radio" name="remember" id="remember-forever" value="until-revoked" checked="checked"/>
-								remember this decision until I revoke it
-								<i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
-								   title="You can revoke this access at any time from your Application pages"></i>
-							</label>
-						</div>
-						<div>
-							<label for="remember-day">
-								<input type="radio" name="remember" id="remember-day" value="one-hour"/>
-								remember this decision for one day
-								<i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
-								   title="The app will be able to use this access for 1 day only. You will be prompted again if app needs access after this period."></i>
-							</label>
-						</div>
-						<div>
-							<label for="remember-not">
-								<input type="radio" name="remember" id="remember-not" value="none"/>
-								prompt me again next time
-								<i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
-								   title="You will be prompted again if app needs access."></i>
-							</label>
-						</div>
-						<div style="margin-top: 15px; text-align: center;">
-							<a href="/self" target="_blank">View my tokens and applications</a>
+					<div th:unless="${! #strings.isEmpty(clientWarning)}" class="row">
+						<div class="well col-xs-8">
+							<p class="margin-bottom-s">Remember this decision:</p>
+							<div>
+								<label for="remember-forever">
+									<input type="radio" name="remember" id="remember-forever" value="until-revoked" checked="checked"/>
+									remember this decision until I revoke it
+									<i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
+									   title="You can revoke this access at any time from your Application pages"></i>
+								</label>
+							</div>
+							<div>
+								<label for="remember-day">
+									<input type="radio" name="remember" id="remember-day" value="one-hour"/>
+									remember this decision for one day
+									<i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
+									   title="The app will be able to use this access for 1 day only. You will be prompted again if app needs access after this period."></i>
+								</label>
+							</div>
+							<div>
+								<label for="remember-not">
+									<input type="radio" name="remember" id="remember-not" value="none"/>
+									prompt me again next time
+									<i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
+									   title="You will be prompted again if app needs access."></i>
+								</label>
+							</div>
+							<div style="margin-top: 15px; text-align: center;">
+								<a href="/self" target="_blank">View my tokens and applications</a>
+							</div>
 						</div>
 					</div>
+
+
+					<div class="flex-space-between">
+						<span class="btn-group btn-group">
+							<button type="submit" class="btn btn-warning" name="actionDeny" value="Deny" >Deny</button>
+							<button type="submit" class="btn" name="actionDebug" value="Debug" title="Submit approval but dont redirect back, let me see the Kong's response first">Debug</button>
+						</span>
+						<button type="submit" class="btn btn btn-success" value="Allow" name="actionAllow">Allow</button>
+					</div>
 				</div>
-
-
-				<div class="flex-space-between">
-					<span class="btn-group btn-group">
-						<button type="submit" class="btn btn-warning" name="actionDeny" value="Deny" >Deny</button>
-						<button type="submit" class="btn" name="actionDebug" value="Debug" title="Submit approval but dont redirect back, let me see the Kong's response first">Debug</button>
-					</span>
-					<button type="submit" class="btn btn btn-success" value="Allow" name="actionAllow">Allow</button>
+				<div th:case="noauth_api">
+					<div class="media-left">
+						<i class="fa fa-hand-paper-o" aria-hidden="true"></i>
+					</div>
+					<div class="media-body">
+						<h2 class="media-heading">Authorize application</h2>
+						<p>Requested API access (OAuth2) is not supported with this API. There could be two reasons for seeing this error:
+							the client application you are using is outdated or our API is not configured properly. We have logged this issue
+							with our support team for investigation.</p>
+					</div>
+				</div>
+				<div th:case="unknown_api">
+					<div class="media-left">
+						<i class="fa fa-question" aria-hidden="true"></i>
+					</div>
+					<div class="media-body">
+						<h2 class="media-heading">Authorize application</h2>
+						<p>This is a request for unknown API. The link is broken or API was decommissioned. Please report this error to application developer</p>
+					</div>
+				</div>
+				<div th:case="unknown_client">
+					<div class="media-left">
+						<i class="fa fa-frown-o" aria-hidden="true"></i>
+					</div>
+					<div class="media-body">
+						<h2 class="media-heading">Authorize application</h2>
+						<p>Sorry, application sent you to this page is not registered with us. We blocked this request to keep you safe.</p>
+					</div>
+				</div>
+				<div th:case="callback_match">
+					<h2>Authorize application</h2>
+					<p>Unable to verify identity of the calling application - mismatched callback url. We blocked this request to keep you safe.
+					</p>
+					<div class="alert alert-danger" role="alert">
+						Application <span class="texthighlight" th:text="${appname}"></span>
+						is registered as <span class="urlhighlight" th:text="${clientWarning}"></span>
+						while current request wants to take you to <span class="urlhighlight" th:text="${appurl}"></span>
+					</div>
 				</div>
 			</div>
-			<div th:case="noauth_api">
-				<div class="media-left">
-					<i class="fa fa-hand-paper-o" style="font-size: 15em;" aria-hidden="true"></i>
-				</div>
-				<div class="media-body">
-					<h2 class="media-heading">Authorize application</h2>
-					<p>Requested API access (OAuth2) is not supported with this API. There could be two reasons for seeing this error:
-						the client application you are using is outdated or our API is not configured properly. We have logged this issue
-						with our support team for investigation.</p>
+
+			<div class="row marketing">
+				<div class="col-sm-12">
+					<h3>Requested scopes and their description</h3>
 				</div>
 			</div>
-			<div th:case="unknown_api">
-				<div class="media-left">
-					<i class="fa fa-question" style="font-size: 15em;" aria-hidden="true"></i>
-				</div>
-				<div class="media-body">
-					<h2 class="media-heading">Authorize application</h2>
-					<p>This is a request for unknown API. The link is broken or API was decommissioned. Please report this error to application developer</p>
+			<div class="row">
+				<div th:each="scopes: ${scopes}" class="col-sm-6">
+					<h4 th:text="${scopes.key}"></h4>
+
+					<p th:text="${scopes.value}"></p>
 				</div>
 			</div>
-			<div th:case="unknown_client">
-				<div class="media-left">
-					<i class="fa fa-frown-o" style="font-size: 15em;" aria-hidden="true"></i>
-				</div>
-				<div class="media-body">
-					<h2 class="media-heading">Authorize application</h2>
-					<p>Sorry, application sent you to this page is not registered with us. We blocked this request to keep you safe.</p>
+
+			<div class="row">
+				<div class="col-lg-10">
+					<a href="/self" target="_blank">View my tokens and applications</a>
 				</div>
 			</div>
-			<div th:case="callback_match">
-				<h2>Authorize application</h2>
-				<p>Unable to verify identity of the calling application - mismatched callback url. We blocked this request to keep you safe.
-				</p>
-				<div class="alert alert-danger" role="alert">
-					Application <span class="texthighlight" th:text="${appname}"></span>
-					is registered as <span class="urlhighlight" th:text="${clientWarning}"></span>
-					while current request wants to take you to <span class="urlhighlight" th:text="${appurl}"></span>
+			<div class="row margin-top-m">
+				<div class="col-lg-10">
+					Overwrite your upi (DEBUG): <input type="text" th:field="*{user_id}"/>
 				</div>
 			</div>
-		</div>
 
-		<div class="row marketing">
-			<div class="col-sm-12">
-				<h3>Requested scopes and their description</h3>
-			</div>
-		</div>
-		<div class="row">
-			<div th:each="scopes: ${scopes}" class="col-sm-6">
-				<h4 th:text="${scopes.key}"></h4>
+		</form>
 
-				<p th:text="${scopes.value}"></p>
-			</div>
-		</div>
-
-		<div class="row">
-			<div class="col-lg-10">
-				<a href="/self" target="_blank">View my tokens and applications</a>
-			</div>
-		</div>
-		<div class="row margin-top-m">
-			<div class="col-lg-10">
-				Overwrite your upi (DEBUG): <input type="text" th:field="*{user_id}"/>
-			</div>
-		</div>
-
-	</form>
-
-	<footer class="footer">
-		<p>&copy; University of Auckland</p>
-	</footer>
-
-</div>
-<!-- /container -->
-
-
-<!-- IE10 viewport hack for Surface/desktop Windows 8 bug -->
-<!--script src="../../assets/js/ie10-viewport-bug-workaround.js"></script-->
-<script type="text/javascript">
-	$(function () {
-		$('[data-toggle="tooltip"]').tooltip();
-	});
-</script>
+	</div>
+	<!-- /container -->
+	<div th:replace="fragments/footer :: footer"></div>
 </body>
 </html>
