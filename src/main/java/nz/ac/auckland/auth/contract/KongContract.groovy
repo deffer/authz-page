@@ -188,7 +188,7 @@ class KongContract {
 					map = reader
 			})
 			response.failure = handler.rcurry({resp, reader->
-				logger.error(reader)
+				logger.error(""+reader)
 			})
 		}
 
@@ -253,6 +253,9 @@ class KongContract {
 		// todo when Mashape fixes the error with redirectUri, use the one passed in here
 
 		String submitTo = authorizeUrl(apiInfo.request_path)
+
+		if (authRequest.state)
+			submitTo += "?state=${URLEncoder.encode(authRequest.state, 'UTF-8')}"
 
 		Map result = [:]
 		String scopes = ""

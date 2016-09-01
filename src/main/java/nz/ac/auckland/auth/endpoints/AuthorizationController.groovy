@@ -202,7 +202,8 @@ public class AuthorizationController {
 			return "uoa-error";
 		} else {
 			String overrideCallback = authRequest.redirect_uri != clientInfo.redirectUri? authRequest.redirect_uri:null;
-			return makeCallback(kongResponseObj, authRequest, clientInfo, model, overrideCallback)
+			String returnCallback = makeCallback(kongResponseObj, authRequest, clientInfo, model, overrideCallback)
+			return returnCallback
 		}
 	}
 
@@ -273,13 +274,33 @@ public class AuthorizationController {
 			return "generic_response" // todo show ERROR page
 		}
 
+		// https://rs.dev.auckland.ac.nz#access_token=28413fa3dbb94f19a23c832b132c43c9&expires_in=7200&token_type=bearer
 		String kongResponse = kongResponseObject.redirect_uri
 
 		URI uri = new URI(kongResponse)
-		Map<String, String> params = KongContract.splitQuery(uri.query)
+		// if it has a fragment, this is a new Kong (0.9), yay less work to do
+		if (uri.fragment && !overrideCallback){
+			return "redirect:" + kongResponse
+		}else
+
+		if (overrideCallback){
+			// replace callback uri
+			return "redirect:" + overrideCallback+"#"+ (uri.fragment?:uri.query)
+		}else if (!uri.fragment){
+			// convert to fragment, unless its an error
+			Map<String, String> params = KongContract.splitQuery(uri.query)
+			if (!params.containsKey("error"))
+				return "redirect:" + new URI(uri.getScheme(), uri.getAuthority(), uri.getPath(), uri.query);
+			else
+				return "redirect:" + kongResponse
+		}else
+			return "redirect:" + kongResponse
+
+
+
 
 		// add state parameter if requested
-		if (authRequest.state && !params.containsKey("state")) {
+		/*if (authRequest.state && !params.containsKey("state")) {
 			String newQuery = "state=${authRequest.state}"
 			if (uri.query)
 				newQuery = uri.query + "&" + newQuery;
@@ -299,7 +320,7 @@ public class AuthorizationController {
 				kongResponse = kongResponse.replace("?", "#")
 		}
 
-		return "redirect:" + kongResponse
+		return "redirect:" + kongResponse*/
 	}
 
 
