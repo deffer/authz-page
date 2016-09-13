@@ -268,59 +268,66 @@ public class AuthorizationController {
 		}
 	}
 
-	private String makeCallback(Map kongResponseObject, AuthRequest authRequest, ClientInfo clientInfo, Model model, String overrideCallback){
+	/**
+	 * Complex logic to support Kong 0.8 and above (in 0.8 url fragments didnt work)ю
+	 * This method will be much smaller if we drop support of 0.8
+	 * @param kongResponseObject
+	 * @param authRequest
+	 * @param clientInfo
+	 * @param model
+	 * @param overrideCallback
+	 * @return
+	 */
+	public static String makeCallback(Map kongResponseObject, AuthRequest authRequest, ClientInfo clientInfo, Model model, String overrideCallback){
+		// responses may vary, e.g.
+		// {"error_description":"Invalid Kong provision_key","state":"123","error":"invalid_provision_key"}
+		// {"redirect_uri":"https://rs.dev.auckland.ac.nz?access_token=1b9..c34&expires_in=7200&state=123&token_type=bearer"}
+		// {"redirect_uri":"https://rs.dev.auckland.ac.nz?error=invalid_request&error_description=Invalid%20redirect_uri%20that%20does%20not%20match%20with%20any%20redirect_uri%20created%20with%20the%20application&state=123"}
 		if ((!kongResponseObject) || !(kongResponseObject.redirect_uri)){
 			model.addAttribute("text", "Unexpected error (kong response has no redirect, status ${kongResponseObject?.status})")
 			return "generic_response" // todo show ERROR page
 		}
 
-		// https://rs.dev.auckland.ac.nz#access_token=28413fa3dbb94f19a23c832b132c43c9&expires_in=7200&token_type=bearer
+		// https://rs.dev.auckland.ac.nz?code=60077d911907496e83db400d92a82e88&state=123
+		// https://rs.dev.auckland.ac.nz#access_token=1c3c6985d1764f76bf12243229909d77&expires_in=7200&state=123&token_type=bearer
+		// https://rs.dev.auckland.ac.nz?error=invalid_request&error_description=Invalid%20redirect_uri%20that%20does%20not%20match%20with%20any%20redirect_uri%20created%20with%20the%20application&state=123
 		String kongResponse = kongResponseObject.redirect_uri
 
 		URI uri = new URI(kongResponse)
-		// if it has a fragment, this is a new Kong (0.9), yay less work to do
-		if (uri.fragment && !overrideCallback){
+		// if it has a fragment (this is Kong 0.9+, yay less work to do) or its for code flow...
+		if ( (uri.fragment || authRequest.response_type.equalsIgnoreCase(AUTHORIZE_CODE_FLOW)) && !overrideCallback){
 			return "redirect:" + kongResponse
-		}else
+		}
 
-		if (overrideCallback){
-			// replace callback uri
-			return "redirect:" + overrideCallback+"#"+ (uri.fragment?:uri.query)
-		}else if (!uri.fragment){
-			// convert to fragment, unless its an error
-			Map<String, String> params = KongContract.splitQuery(uri.query)
-			if (!params.containsKey("error"))
-				return "redirect:" + new URI(uri.getScheme(), uri.getAuthority(), uri.getPath(), uri.query);
+
+		if (authRequest.response_type.equalsIgnoreCase(AUTHORIZE_CODE_FLOW)){ // no fragment replace needed
+			if (overrideCallback)
+				return "redirect:" + overrideCallback+"?"+uri.query // assuming no fragments on CODE FLOW
 			else
 				return "redirect:" + kongResponse
-		}else
-			return "redirect:" + kongResponse
-
-
-
-
-		// add state parameter if requested
-		/*if (authRequest.state && !params.containsKey("state")) {
-			String newQuery = "state=${authRequest.state}"
-			if (uri.query)
-				newQuery = uri.query + "&" + newQuery;
-
-			URI newUri = new URI(uri.getScheme(), uri.getAuthority(), uri.getPath(), newQuery, uri.getFragment());
-
-			kongResponse = newUri.toString()
-			uri = newUri
 		}
 
-		if (!params.containsKey("error")) {
+		// Implicit flow. May need to take care of fragments
+		if (uri.fragment){
 			if (overrideCallback)
-				kongResponse = overrideCallback + "?" + uri.query
+				return "redirect:"+ overrideCallback+"#"+uri.fragment
+			else
+				return "redirect:" + kongResponse
+		}else{
+			Map<String, String> params = KongContract.splitQuery(uri.query)
 
-			// assumes that neither overrideCallback nor registered callback would have a '#' in them
-			if (authRequest.use_fragment || (authRequest.response_type?.equals(AUTHORIZE_IMPLICIT_FLOW) && clientInfo.groups.contains(KongContract.GROUP_HASH_CLIENT)))
-				kongResponse = kongResponse.replace("?", "#")
+			if (overrideCallback){
+				if (!params.containsKey("error"))
+					return "redirect:" + overrideCallback+"#"+uri.query;
+				else
+					return "redirect:" + overrideCallback+"?"+uri.query
+			}else{
+				if (!params.containsKey("error"))
+					return "redirect:" + new URI(uri.getScheme(), uri.getAuthority(), uri.getPath(), uri.query); // fragment
+				else
+					return "redirect:" + kongResponse
+			}
 		}
-
-		return "redirect:" + kongResponse*/
 	}
 
 
