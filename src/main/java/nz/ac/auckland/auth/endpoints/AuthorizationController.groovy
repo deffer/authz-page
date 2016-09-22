@@ -54,9 +54,9 @@ public class AuthorizationController {
 	private String renderAuthForm(String userId, String userName, String apiId, AuthRequest authRequest, Model model){
 
 		if (!sanitizeRequestParameters(authRequest, userId, model)) {
-			logger.warn(model.text)
 			return "uoa-error"
 		}
+
 		// defined greetings value
 		String displayName = userName != "NULL"? userName :  "Unknown (${authRequest.user_id})"
 		model.addAttribute("name", displayName);
@@ -108,24 +108,26 @@ public class AuthorizationController {
 
 
 	boolean sanitizeRequestParameters(AuthRequest authRequest, String userId, Model model) {
-		// todo if userId is NULL, show error (user is not authenticated, SSO failed??)
 		// do we need to sanitize redirect_uri? its always passed through URI constructor which should do it for us
 		if (!validateId(authRequest.client_id)){
+			logger.error("Invalid client_id "+authRequest.client_id)
 			model.addAttribute("text", "Invalid client_id")
 			return false
 		}
 
 		authRequest.response_type = authRequest.response_type?authRequest.response_type.toLowerCase():""
 		if (!(authRequest.response_type in [AUTHORIZE_CODE_FLOW,AUTHORIZE_IMPLICIT_FLOW])){
-			// warning may be???
+			logger.warn("Invalid flow '${authRequest.response_type}' - fallback to $AUTHORIZE_CODE_FLOW")
 			authRequest.response_type = AUTHORIZE_CODE_FLOW
 		}
 
 		if ((!userId) || userId=="NULL"){
 			if (!debug){
+				logger.error("Unexpected error (SSO fail)")
 				model.addAttribute("text", "Unexpected error (SSO fail)")
 				return false
 			}else {
+				logger.error("No user found in REMOTE_USER header, fallback to 'user' (application is in debug mode)")
 				authRequest.user_id = "user";
 				return true
 			}
@@ -150,18 +152,23 @@ public class AuthorizationController {
 			return authDeny(authRequest, model);
 
 		String forUser = (authRequest.user_id && debug)?authRequest.user_id : userId
+		if (forUser == "NULL" && !debug){
+			model.addAttribute("text", "Unexpected error (SSO fail)")
+			logger.error("Unexpected error (SSO fail) - REMOTE_USER is $forUser")
+			return "uoa-error"
+		}
 
 		// fetch api url and oauth2 provision key for given api
 		ApiInfo apiInfo = kong.getApiInfo(apiId);
 		ClientInfo clientInfo = kong.getClientInfo(authRequest.client_id)
 
 		if ( (!clientInfo) || (!apiInfo) || (!(apiInfo.id)) || !(apiInfo.provisionKey)){
-			// todo show error page
-			// if apiInfo is available but provisionKey is empty, also log it as Kong configuration error
-			logger.warn("Not found: clientInfo="+clientInfo?.toString()+"  apiInfo="+apiInfo?.toString()+"  provisionKey="+apiInfo?.provisionKey)
+			if (apiInfo && !(apiInfo.provisionKey))
+				logger.error("API ${apiInfo.name} ($apiId) is not configured properly - provisionKey is missing")
+			else
+				logger.error("Not found: clientInfo="+clientInfo?.toString()+"  apiInfo="+apiInfo?.toString()+"  provisionKey="+apiInfo?.provisionKey)
 			model.addAttribute("user_id", userId);
 			model.addAttribute("map", authRequest);
-			model.addAttribute("provision_key", apiInfo?.provisionKey);
 			return "uoa-error";
 		}
 
@@ -169,11 +176,9 @@ public class AuthorizationController {
 		//    if (authRequest.redirect_uri != clientInfo.redirectUri
 		//     && !clientInfo.groups.contains(KongContract.GROUP_DYNAMIC_CLIENT)){
 		if (!isOkToRedirect(authRequest, clientInfo, model)){
-			// todo show error page
 			logger.warn("Mismatched callback uri: passed '${authRequest.redirect_uri}' expected '${clientInfo.redirectUri}'")
 			model.addAttribute("user_id", userId);
 			model.addAttribute("map", authRequest);
-			model.addAttribute("provision_key", apiInfo.provisionKey);
 			return "uoa-error";
 		}
 
@@ -183,7 +188,7 @@ public class AuthorizationController {
 		// now we need to inform Kong that user authenticatedUserId grants authorization to application cliend_id
 		Map kongResponseObj = kong.submitAuthorization(forUser, redirectUri, apiInfo, authRequest);
 
-		if (authRequest.actionDebug) {
+		if (debug && authRequest.actionDebug) {
 			model.addAttribute("user_id", userId);
 			model.addAttribute("map", authRequest);
 			model.addAttribute("provision_key", apiInfo.provisionKey);
@@ -192,8 +197,7 @@ public class AuthorizationController {
 
 			return "temp";
 		} else if(!(kongResponseObj.redirect_uri)) {
-			//todo change to log.warn
-
+			logger.error("Unexpected error (kong response has no redirect, status ${kongResponseObj?.status})")
 			model.addAttribute("user_id", userId);
 			model.addAttribute("provision_key", apiInfo.provisionKey);
 			model.addAttribute("submitTo", kong.authorizeUrl(apiInfo.request_path));
@@ -284,8 +288,9 @@ public class AuthorizationController {
 		// {"redirect_uri":"https://rs.dev.auckland.ac.nz?access_token=1b9..c34&expires_in=7200&state=123&token_type=bearer"}
 		// {"redirect_uri":"https://rs.dev.auckland.ac.nz?error=invalid_request&error_description=Invalid%20redirect_uri%20that%20does%20not%20match%20with%20any%20redirect_uri%20created%20with%20the%20application&state=123"}
 		if ((!kongResponseObject) || !(kongResponseObject.redirect_uri)){
-			model.addAttribute("text", "Unexpected error (kong response has no redirect, status ${kongResponseObject?.status})")
-			return "generic_response" // todo show ERROR page
+			// shouldnt happen, will be caught earlier, but just in case...
+			model.addAttribute("text", "Unexpected error from API gateway")
+			return "uoa-error"
 		}
 
 		// https://rs.dev.auckland.ac.nz?code=60077d911907496e83db400d92a82e88&state=123
@@ -334,11 +339,12 @@ public class AuthorizationController {
 	public String authDeny(AuthRequest authRequest, Model model) {
 		ClientInfo clientInfo = kong.getClientInfo(authRequest.client_id)
 		if (!clientInfo) {
+			logger.error("Unexpected error - unable ot find client info (on deny step) - ${authRequest.client_id}")
 			model.addAttribute("text", "Unknown application (client_id)")
-			return "generic_response" // todo show ERROR page
+			return "uoa-error"
 		}
 
-		String clientCallbackUrl = clientInfo.redirectUri+"?error=access_denied&error_description=The+user+denied+access+to+your+application";
+		String clientCallbackUrl = clientInfo.redirectUri+"?error=access_denied&error_description=The+user+has+denied+the+access";
 
 		return "redirect:" + clientCallbackUrl;
 	}
