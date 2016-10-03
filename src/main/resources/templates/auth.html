@@ -14,7 +14,7 @@
 			<input type="hidden" th:field="*{scope}"/>
 			<input type="hidden" th:field="*{use_fragment}"/>
 			<div class="jumbotron" th:switch="${clientError}">
-				<div th:case="${null}">
+				<div th:case="${null}" id="div_ask_user">
 					<h2>Authorize application</h2>
 					<p>
 						<span class="texthighlight" th:text="${appname}"></span>
@@ -22,9 +22,9 @@
 						Do you allow? You will be redirected to <span class="urlhighlight" th:text="${apphost}" th:title="${appurl}"></span>
 					</p>
 
-					<div class="alert alert-warning" role="alert" th:if="${! #strings.isEmpty(clientWarning)}">
+					<div class="alert alert-warning" role="alert" th:if="${! #strings.isEmpty(clientWarning)}" id="div_warn_callback_override">
 						This application was registered with a different callback <span class="urlhighlight" th:text="${clientWarning}"></span>.
-						Do not accept his request if you dont trust application which sent you here.
+						Do not accept his request if you don't trust application which sent you here.
 					</div>
 
 					<div th:unless="${! #strings.isEmpty(clientWarning)}" class="row">
@@ -69,7 +69,7 @@
 						<button type="submit" class="btn btn btn-success" value="Allow" name="actionAllow">Allow</button>
 					</div>
 				</div>
-				<div th:case="noauth_api">
+				<div th:case="noauth_api" id="div_api_noauth">
 					<div class="media-left">
 						<i class="fa fa-hand-paper-o" aria-hidden="true"></i>
 					</div>
@@ -80,7 +80,7 @@
 							with our support team for investigation.</p>
 					</div>
 				</div>
-				<div th:case="unknown_api">
+				<div th:case="unknown_api" id="div_error_api_not_found">
 					<div class="media-left">
 						<i class="fa fa-question" aria-hidden="true"></i>
 					</div>
@@ -89,7 +89,7 @@
 						<p>This is a request for unknown API. The link is broken or API was decommissioned. Please report this error to application developer</p>
 					</div>
 				</div>
-				<div th:case="unknown_client">
+				<div th:case="unknown_client" id="div_error_client_not_found">
 					<div class="media-left">
 						<i class="fa fa-frown-o" aria-hidden="true"></i>
 					</div>
@@ -98,7 +98,7 @@
 						<p>Sorry, application sent you to this page is not registered with us. We blocked this request to keep you safe.</p>
 					</div>
 				</div>
-				<div th:case="callback_match">
+				<div th:case="callback_match" id="div_error_callback_nomatch">
 					<h2>Authorize application</h2>
 					<p>Unable to verify identity of the calling application - mismatched callback url. We blocked this request to keep you safe.
 					</p>
@@ -128,7 +128,7 @@
 					<a href="/self" target="_blank">View my tokens and applications</a>
 				</div>
 			</div>
-			<div class="row margin-top-m">
+			<div class="row margin-top-m" id="div_debug_override_upi">
 				<div class="col-lg-10">
 					Overwrite your upi (DEBUG): <input type="text" th:field="*{user_id}"/>
 				</div>
