@@ -27,7 +27,7 @@
 						Do not accept his request if you don't trust application which sent you here.
 					</div>
 
-					<div th:unless="${! #strings.isEmpty(clientWarning)}" class="row">
+					<div th:if="${rememberme==true and #strings.isEmpty(clientWarning)}" class="row">
 						<div class="well col-xs-8">
 							<p class="margin-bottom-s">Remember this decision:</p>
 							<div>
@@ -64,7 +64,7 @@
 					<div class="flex-space-between">
 						<span class="btn-group btn-group">
 							<button type="submit" class="btn btn-warning" name="actionDeny" value="Deny" >Deny</button>
-							<button type="submit" class="btn" name="actionDebug" value="Debug" title="Submit approval but dont redirect back, let me see the Kong's response first">Debug</button>
+							<button th:if="${debug}" type="submit" class="btn" name="actionDebug" value="Debug" title="Submit approval but dont redirect back, let me see the Kong's response first">Debug</button>
 						</span>
 						<button type="submit" class="btn btn btn-success" value="Allow" name="actionAllow">Allow</button>
 					</div>
@@ -128,7 +128,7 @@
 					<a href="/self" target="_blank">View my tokens and applications</a>
 				</div>
 			</div>
-			<div class="row margin-top-m" id="div_debug_override_upi">
+			<div class="row margin-top-m" id="div_debug_override_upi" th:if="${debug}">
 				<div class="col-lg-10">
 					Overwrite your upi (DEBUG): <input type="text" th:field="*{user_id}"/>
 				</div>

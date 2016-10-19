@@ -36,6 +36,9 @@ public class AuthorizationController {
 	@Value('${as.autogrant.flows}')
 	private String[] autoGrantFlowsAllowed = ["token"]
 
+	@Value('${as.hide.rememberme}')
+	private boolean hideRememberMe
+
 	private static final Logger logger = LoggerFactory.getLogger(AuthorizationController.class);
 
 	@Autowired
@@ -99,6 +102,8 @@ public class AuthorizationController {
 			model.addAttribute("apphost", (uri.getScheme() ? uri.getScheme() + "://" : "") + uri.getHost());
 			model.addAttribute("appurl", uri.toString());
 			model.addAttribute("apiid", apiId);
+			model.addAttribute("debug", debug);
+			model.addAttribute("rememberme", !hideRememberMe); // depends on flow type and presence of warnings
 		}else{
 			model.addAttribute("clientError", "unknown_client")
 		}

@@ -89,3 +89,39 @@ h2.media-heading {
 .media-left > i.fa {
     font-size: 15em;
 }
+
+.btn-warning {
+    color: #000;
+    background: #ffffff;
+    margin: 2px 13px;
+    text-align: center;
+    display: inline-block;
+    cursor: default;
+    border: 1px solid #00467f;
+    border-radius: 4px;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+}
+
+.btn-warning:focus, .btn-warning:hover {
+    background: #009ac7;
+    color: #ffffff;
+}
+
+.btn-success {
+    color: #fff;
+    background: #00467f;
+    margin: 2px 13px;
+    text-align: center;
+    display: inline-block;
+    cursor: default;
+    border: 1px solid #00467f;
+    border-radius: 4px;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+}
+
+.btn-success:focus, .btn-success:hover {
+    background: #009ac7;
+    color: #ffffff;
+}
