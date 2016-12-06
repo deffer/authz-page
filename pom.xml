@@ -7,7 +7,7 @@
 	<version>0.0.13-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
-	<name>authz-page</name>
+	<name>authorization-page</name>
 	<description>OAuth2 authorization server</description>
 
 	<parent>
@@ -37,6 +37,7 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<java.version>1.7</java.version>
+		<build.number>SNAPSHOT</build.number>
 	</properties>
 
 	<dependencies>
@@ -136,6 +137,21 @@
 				</dependencies>
 
 			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<configuration>
+					<archive>
+						<manifestEntries>
+							<Specification-Title>${project.name}</Specification-Title>
+							<Specification-Version>${project.version}</Specification-Version>
+							<Implementation-Version>${build.number}</Implementation-Version>
+						</manifestEntries>
+					</archive>
+				</configuration>
+			</plugin>
+
 			<!-- need 2.5.1 or greater to fix windows problem with mvn.bat been removed from 3.3.x maven -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
