@@ -5,7 +5,10 @@ Integrates with Kong, where Kong is used to manage codes/tokens and token-based 
 The main purpose of Authorization Page is to authenticate the end user (through SSO configured on webroute) 
 and relay user's consent to Kong. Kong will provision a code/token which is then returned to the client.
 
-This version is intended to work with Kong versions 0.9.6 - 0.9.9
+## Important
+
+ * This version is intended to work with Kong versions 0.9.6 - 0.9.9
+ * Make sure to put java.conf (from `deploy` folder) to the `/etc/authserver` after deployment
 
 ## Overview  
 
