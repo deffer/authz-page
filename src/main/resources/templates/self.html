@@ -18,7 +18,11 @@
 					<td></td>
 					<td>21-01-2016</td>
 					<td>Never</td>
-					<td><a class="btn btn-xs" href="#"><span class="glyphicon glyphicon-trash"></span> Revoke</a></td>
+					<td>
+						<a class="btn btn-xs" style="display:none;" href="#">
+							<span class="glyphicon glyphicon-trash disable-links"></span> Revoke
+						</a>
+					</td>
 				</tr>
 			</table>
 		</div>
@@ -34,7 +38,9 @@
 					<td><span th:text="${tk.scope}"></span></td>
 					<td><span th:text="${tk.issuedStr}" th:title="${tk.issuedHint}"></span></td>
 					<td><span th:text="${tk.expiresStr}" th:title="${tk.expiresHint}"></span></td>
-					<td><a class="btn btn-xs" href="#"><span class="glyphicon glyphicon-trash"></span> Revoke</a></td>
+					<td><a class="btn btn-xs" href="#" th:onclick="'deleteToken(\''+${tk.access_token}+'\');'">
+						<span class="glyphicon glyphicon-trash"></span> Revoke
+					</a></td>
 				</tr>
 			</table>
 		</div>

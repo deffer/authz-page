@@ -13,13 +13,15 @@
 			<input type="hidden" th:field="*{state}"/>
 			<input type="hidden" th:field="*{scope}"/>
 			<input type="hidden" th:field="*{use_fragment}"/>
-			<div class="jumbotron" th:switch="${clientError}">
+			<!--div class="jumbotron" th:switch="${clientError}"-->
+			<div class="panel panel-primary" th:switch="${clientError}"><div class="panel-body">
 				<div th:case="${null}" id="div_ask_user">
 					<h2>Authorize application</h2>
 					<p>
 						<span class="texthighlight" th:text="${appname}"></span>
 						would like to have authorization to access your data or call services on your behalf.
-						Do you allow? You will be redirected to <span class="urlhighlight" th:text="${apphost}" th:title="${appurl}"></span>
+						If you approve, authorization code will be sent to <span class="urlhighlight" th:text="${apphost}" th:title="${appurl}"></span>
+						This code can be used to access information about you or other data as indicated by requested scopes.
 					</p>
 
 					<div class="alert alert-warning" role="alert" th:if="${! #strings.isEmpty(clientWarning)}" id="div_warn_callback_override">
@@ -62,10 +64,7 @@
 
 
 					<div class="flex-space-between">
-						<span class="btn-group btn-group">
-							<button type="submit" class="btn btn-warning" name="actionDeny" value="Deny" >Deny</button>
-							<button th:if="${debug}" type="submit" class="btn" name="actionDebug" value="Debug" title="Submit approval but dont redirect back, let me see the Kong's response first">Debug</button>
-						</span>
+						<button type="submit" class="btn btn-warning" value="Deny" name="actionDeny">Deny</button>
 						<button type="submit" class="btn btn btn-success" value="Allow" name="actionAllow">Allow</button>
 					</div>
 				</div>
@@ -86,7 +85,7 @@
 					</div>
 					<div class="media-body">
 						<h2 class="media-heading">Authorize application</h2>
-						<p>This is a request for unknown API. The link is broken or API was decommissioned. Please report this error to application developer</p>
+						<p>This is a request for an unknown API. The link is broken or the API was decommissioned. Please report this error to the application developer.</p>
 					</div>
 				</div>
 				<div th:case="unknown_client" id="div_error_client_not_found">
@@ -95,12 +94,12 @@
 					</div>
 					<div class="media-body">
 						<h2 class="media-heading">Authorize application</h2>
-						<p>Sorry, application sent you to this page is not registered with us. We blocked this request to keep you safe.</p>
+						<p>Sorry, application which sent you to this page is not registered with us. We've  blocked this request to keep you safe.</p>
 					</div>
 				</div>
 				<div th:case="callback_match" id="div_error_callback_nomatch">
 					<h2>Authorize application</h2>
-					<p>Unable to verify identity of the calling application - mismatched callback url. We blocked this request to keep you safe.
+					<p>We couldn't verify identity of the calling application - mismatched callback url. We've blocked this request to keep you safe.
 					</p>
 					<div class="alert alert-danger" role="alert">
 						Application <span class="texthighlight" th:text="${appname}"></span>
@@ -108,29 +107,42 @@
 						while current request wants to take you to <span class="urlhighlight" th:text="${appurl}"></span>
 					</div>
 				</div>
-			</div>
+			</div></div>
 
-			<div class="row marketing">
-				<div class="col-sm-12">
-					<h3>Requested scopes and their description</h3>
+			<div class="row"  th:if="${scopes != null } and not ${scopes.size()==0}">
+				<div class="col-sm-12" style="margin-top: 40px;">
+					<h4 class="scopes-header">Requested scopes and their description</h4>
 				</div>
 			</div>
 			<div class="row">
-				<div th:each="scopes: ${scopes}" class="col-sm-6">
-					<h4 th:text="${scopes.key}"></h4>
-
-					<p th:text="${scopes.value}"></p>
+				<div th:each="ascope: ${scopes}" class="col-sm-6">
+					<div class="bs-callout" th:classappend="${ascope.warn} ? bs-callout-danger : bs-callout-primary">
+						<h4 th:text="${ascope.key}"></h4>
+						<p th:text="${ascope.value}"> </p>
+					</div>
 				</div>
 			</div>
 
-			<div class="row">
-				<div class="col-lg-10">
-					<a href="/self" target="_blank">View my tokens and applications</a>
-				</div>
-			</div>
-			<div class="row margin-top-m" id="div_debug_override_upi" th:if="${debug}">
-				<div class="col-lg-10">
-					Overwrite your upi (DEBUG): <input type="text" th:field="*{user_id}"/>
+			<div class="panel panel-danger" th:if="${debug}">
+				<div class="panel-heading">Debug services</div>
+				<div class="panel-body">
+
+					<div class="panel">
+						<div class="panel-body">
+						<h4>Changing upi</h4>
+						<p> You can override <code>upi</code> of logged-in user</p>
+						<p><input type="text" th:field="*{user_id}"/></p>
+						</div>
+					</div>
+
+
+					<div class="panel">
+						<div class="panel-body">
+						<h4>Debug mode</h4>
+						<p> You can use Debug mode to test approval step-by-step. Before redirecting back to application, you can see Kong's response.</p>
+						<p><button type="submit" class="btn" name="actionDebug" value="Debug" > Enter Debug</button></p>
+						</div>
+					</div>
 				</div>
 			</div>
 
@@ -138,6 +150,8 @@
 
 	</div>
 	<!-- /container -->
+
+
 	<div th:replace="fragments/footer :: footer"></div>
 </body>
 </html>

@@ -27,8 +27,8 @@ public class AuthorizationController {
 	public static final String AUTHORIZE_CODE_FLOW = "code"
 	public static final String AUTHORIZE_IMPLICIT_FLOW = "token"
 
-	@Value('${as.debug}')
-	private boolean debug = false
+	@Value('${as.development}')
+	private boolean development = false
 
 	@Value('${as.trustedRedirectHosts}')
 	private String[] trustedRedirectHosts
@@ -39,10 +39,25 @@ public class AuthorizationController {
 	@Value('${as.hide.rememberme}')
 	private boolean hideRememberMe
 
+	@Value('${as.message.noScopeDescription}')
+	private String msgNoScopeDescription = "Scope description is not available"
+
+	@Value('${as.message.scopeNotAllowed}')
+	private String msgScopeNotAllowed = "This scope is not available in this context. This is a problem with consumer application."
+
+
 	private static final Logger logger = LoggerFactory.getLogger(AuthorizationController.class);
 
 	@Autowired
 	KongContract kong
+
+	@RequestMapping(value = "/")
+	public String index(@RequestHeader(value = "displayName", defaultValue = "Unknown") String userName, Model model) {
+		System.out.println("Rendering index.html");
+		model.addAttribute("name", userName)
+		model.addAttribute("debug", development)
+		return "index";
+	}
 
 	// http://localhost:8090/identity/oauth2/authorize?client_id=my_clientid&response_type=code&scope=identity-read,identity-write
 	@RequestMapping("/{api_id}/oauth2/authorize")
@@ -102,7 +117,7 @@ public class AuthorizationController {
 			model.addAttribute("apphost", (uri.getScheme() ? uri.getScheme() + "://" : "") + uri.getHost());
 			model.addAttribute("appurl", uri.toString());
 			model.addAttribute("apiid", apiId);
-			model.addAttribute("debug", debug);
+			model.addAttribute("debug", development);
 			model.addAttribute("rememberme", !hideRememberMe); // depends on flow type and presence of warnings
 		}else{
 			model.addAttribute("clientError", "unknown_client")
@@ -127,7 +142,7 @@ public class AuthorizationController {
 		}
 
 		if ((!userId) || userId=="NULL"){
-			if (!debug){
+			if (!development){
 				logger.error("Unexpected error (SSO fail)")
 				model.addAttribute("text", "Unexpected error (SSO fail)")
 				return false
@@ -156,10 +171,10 @@ public class AuthorizationController {
 		if (authRequest.actionDeny)
 			return authDeny(authRequest, model);
 
-		String forUser = (authRequest.user_id && debug)?authRequest.user_id : userId
-		if (forUser == "NULL" && !debug){
+		String forUser = (authRequest.user_id && development)?authRequest.user_id : userId
+		if (forUser == "NULL" && !development){
 			model.addAttribute("text", "Unexpected error (SSO fail)")
-			logger.error("Unexpected error (SSO fail) - REMOTE_USER is $forUser")
+			logger.error("ALERT: Unexpected error (SSO fail) - REMOTE_USER is $forUser")
 			return "uoa-error"
 		}
 
@@ -193,7 +208,7 @@ public class AuthorizationController {
 		// now we need to inform Kong that user authenticatedUserId grants authorization to application cliend_id
 		Map kongResponseObj = kong.submitAuthorization(forUser, redirectUri, apiInfo, authRequest);
 
-		if (debug && authRequest.actionDebug) {
+		if (development && authRequest.actionDebug) {
 			model.addAttribute("user_id", userId);
 			model.addAttribute("map", authRequest);
 			model.addAttribute("provision_key", apiInfo.provisionKey);
@@ -356,11 +371,16 @@ public class AuthorizationController {
 
 	private List<String> processScopes(AuthRequest authRequest, ApiInfo apiInfo, Model model){
 		List<String> validScopes = []
-		Map<String, String> scopes = new HashMap<>();
-		if (!authRequest.scope)
-			return validScopes
+		//Map<String, String> scopes = new HashMap<>();
+		List scopes = []
+		String[] requestedScopes = []
 
-		String[] requestedScopes = authRequest.scope?.split(" ")
+		if (!authRequest.scope) {
+			if (apiInfo?.scopes?.contains("default"))
+				requestedScopes = ["default"]
+		} else
+			requestedScopes = authRequest.scope?.split(" ")
+
 		if (requestedScopes.length==1 && requestedScopes[0].contains(','))
 			requestedScopes = authRequest.scope?.split(",")
 
@@ -369,12 +389,14 @@ public class AuthorizationController {
 				validScopes.add(it)
 				String scopeDescription = kong.getScopeDescription(it)
 				if (scopeDescription)
-					scopes.put(it, scopeDescription)
+					scopes.add([key:it, value: scopeDescription, warn:false])
 				else {
-					// todo if we cant find description of a scope, what should be do
+					// todo if we cant find description of a scope, what should be do?
+					scopes.add([key:it, value:msgNoScopeDescription, warn:true])
 				}
 			}else{
 				// todo if scope is not valid for this endpoint, warn the user right away?
+				scopes.add([key:it, value:msgScopeNotAllowed, warn:true])
 			}
 
 		}

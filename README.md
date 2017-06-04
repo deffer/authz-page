@@ -1,16 +1,21 @@
 # OAuth2 Authorization Server 
 
-Implements a user-facing Authorization Page to support a step in OAuth2 `Implicit` and `Authorization Code` flows. Integrates with Kong, where Kong is used to manage tokens and token-based access to APIs.
-The main purpose of Authorization Page is to authenticate an end user (through SSO configured on webroute) and securely communicate user's decision YES/NO to Kong.    
+Implements a user-facing Authorization Page to support a step in OAuth2 `Implicit` and `Authorization Code` flows. 
+Integrates with Kong, where Kong is used to manage codes/tokens and token-based access to APIs.
+The main purpose of Authorization Page is to authenticate the end user (through SSO configured on webroute) 
+and relay user's consent to Kong. Kong will provision a code/token which is then returned to the client.
+
+This version is intended to work with Kong versions 0.9.6 - 0.9.9
 
 ## Overview  
 
 Exposes two endpoints:
 
  * authorize endpoint `/oauth2/authorize` which returns code or token (based on request type), part of [OAuth2 spec](https://tools.ietf.org/html/rfc6749#section-3.1)
- * user profile endpoint `/self` - a user-facing page to allow self-service token revokation
+ * user profile endpoint `/self` - a user-facing page to allow self-service token revokation at `/self/token/{token}`
+ * a generic page at `/` to help users who got lost
 
-Some features specific to University include:
+On top of OAuth2 protocol, it includes some customizations specific to University:
 
  * *trusted* consumers - for web application which are part of University web experience, the end user will not be asked to approve the access
  * *dynamic* consumers - common application credentials, can be used by any consumer and typically used on API Explorers. These consumers can provide an alternative `callback` uri (as long as it is on the same domain as registered in Kong)
@@ -52,34 +57,23 @@ Please note, application.properties in the classpath take preference
 over as.properties from home folders. When building application,
 ensure all properties in application.properties are commented.
 
-Another note. Logging configuration must go into `application.properties` because for some reason if its in the additional properties (`as.properties`) it is ignored.
+Another note. Logging configuration must go into `application.properties`. For some reason if its in the additional properties (`as.properties`) it is ignored.
  
 
 
 ## Deployment
 
-This application can utilize `api-installer` package to manage its initial deployment (similar to [APIs](https://wiki.auckland.ac.nz/display/AT/API+-+Production+model#API-Productionmodel-JavaAPIimplementation)).
+This application is deployed in the same manner as APIs, utilizing `api-installer` and jenkins to [create a service](https://wiki.auckland.ac.nz/display/ITPRO/API+-+Developers+guide#API-Developersguide-Step3-Createservice)
+and using java CI/CD pipeline for deployments.
 
+Properties can be found in `/etc/authserver/application.properties`
+Deployment jar is in `/usr/share/apis/autherserver`
+Logs are in `/var/log/apis/authserver`
 
-### First install (prepare environment)
-
-If its a new VM, run api-install script to provision user, folders and configure a new systemd service
- 
-    sudo api-install authserver "OAuth2 Server - University of Auckland"
-
-Copy/update `application.properties` into `/etc/authserver/application.properties` and make sure to update connection to Kong and keep apikey empty.
-
-### Deployment
-
-After releasing application (which will upload into Nexus for traceability), grab the generated jar and copy it into
-
-    /usr/share/apis/autherserver
-
-Run the command
+To restart the service manually, run
 
     sudo systemctl restart authserver
 
-Logs can be found in `/var/log/authserver/console.log`
 To change JVM properties or any other details of jar execution, look in the `/opt/authserver/authserver.initd`
 
 ## Building rpm (deprecated)
@@ -106,4 +100,3 @@ The application is installed as systemd service, to restart
 
     sudo systemctl restart authserver
     
-To change JVM properties or any other details of jar execution, look in the `/opt/authserver/authserver.initd`
