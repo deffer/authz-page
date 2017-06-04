@@ -35,6 +35,13 @@ node{
     sh "'${mvnHome}/bin/mvn' clean"
     sh "'${mvnHome}/bin/mvn' --batch-mode ${arguments} release:prepare"
     sh "'${mvnHome}/bin/mvn' --batch-mode ${arguments} release:perform"
+	
+	echo 'push pom.xml change and tag'
+    sshagent(['33a32aa1-7b42-4cd2-86b0-15488a7a8c95']) {
+        sh "git tag b${env.BUILD_NUMBER}"
+        sh "git push origin master"
+        sh "git push origin --tags"
+    }	
 }
 
 stage 'Deploy release to TEST'
@@ -51,12 +58,6 @@ node {
         sh "ssh oauthtst02.its.auckland.ac.nz 'sudo /usr/bin/systemctl restart authserver'"		
     }
     
-    echo 'push pom.xml change and tag'
-    sshagent(['33a32aa1-7b42-4cd2-86b0-15488a7a8c95']) {
-        sh "git tag b${env.BUILD_NUMBER}"
-        sh "git push origin master"
-        sh "git push origin --tags"
-    }
 }
 
 
