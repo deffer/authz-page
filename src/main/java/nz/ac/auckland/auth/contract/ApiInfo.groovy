@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 // API info returned by Kong
 @JsonIgnoreProperties(ignoreUnknown = true)
 class ApiInfo {
+	// Kong 0.9.x
 	// this is what is returned by making a call to http://localhost:8001/apis/pcfdev-oauth
 	/*
 	"upstream_url":"https:\/\/www.dev.auckland.ac.nz\/study-options\/api\/1.23\/search\/results",
@@ -15,6 +16,22 @@ class ApiInfo {
 	"created_at":1450149205000
 	 */
 
+	// Kong 0.10.x
+	/*
+	{
+		"uris": ["\/meta\/v1"],
+		"id": "fedbdffa-3268-4834-b392-31e70e8161cc",
+		"upstream_read_timeout": 60000,
+		"preserve_host": false,
+		"created_at": 1477534113000,
+		"upstream_connect_timeout": 60000,
+		"upstream_url": "http:\/\/apiboxdev01.its.auckland.ac.nz:8001",
+		"strip_uri": true,
+		"name": "meta-v1",
+		"upstream_send_timeout": 60000,
+		"retries": 5
+	}
+	 */
 	String id
 	String upstream_url
 	String request_path
@@ -29,7 +46,7 @@ class ApiInfo {
 
 	// plugin info can be retrieved by calling http://localhost:8001/apis/pcfdev-oauth/plugins
 	// and the result would be
-
+	// Kong 0.9x
 	/*
 	{
 		"data": [{
@@ -41,6 +58,7 @@ class ApiInfo {
 			"config": {
 				"mandatory_scope": false,
 				"token_expiration": 7200,
+				"accept_http_if_already_terminated": true,  <--- in kong 0.10
 				"enable_implicit_grant": false,
 				"hide_credentials": false,
 				"enable_password_grant": false,
@@ -52,4 +70,5 @@ class ApiInfo {
 		}]
 	}
 	 */
+
 }

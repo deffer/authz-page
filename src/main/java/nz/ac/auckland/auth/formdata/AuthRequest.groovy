@@ -34,6 +34,10 @@ public class AuthRequest {
 
 	String user_id; // temp, for debug
 
+	public List<String> extractedScopes(){
+		return scope.trim().replaceAll(",", ' ').split(" ").findAll{!it.trim().isEmpty()} as List<String>
+	}
+
 	public Map toProps(){
 		Map result = new HashMap<>()
 		this.getProperties().each {k,v -> if (!k.equals("class")) result.put(k, v)}

@@ -83,7 +83,12 @@ public class AuthorizationController {
 		model.addAttribute("map", authRequest);
 
 		ApiInfo apiInfo = kong.getApiInfo(apiId)
-		if ((!apiInfo) || !(apiInfo.id)){
+		if (apiInfo == null){
+			model.addAttribute("user_id", userId);
+			model.addAttribute("text", "API Gateway error");
+			return "uoa-error";
+		}
+		if (!(apiInfo.id)){
 			model.addAttribute("clientError", "unknown_api")
 			return "auth";
 		}
@@ -371,7 +376,6 @@ public class AuthorizationController {
 
 	private List<String> processScopes(AuthRequest authRequest, ApiInfo apiInfo, Model model){
 		List<String> validScopes = []
-		//Map<String, String> scopes = new HashMap<>();
 		List scopes = []
 		String[] requestedScopes = []
 
@@ -379,10 +383,7 @@ public class AuthorizationController {
 			if (apiInfo?.scopes?.contains("default"))
 				requestedScopes = ["default"]
 		} else
-			requestedScopes = authRequest.scope?.split(" ")
-
-		if (requestedScopes.length==1 && requestedScopes[0].contains(','))
-			requestedScopes = authRequest.scope?.split(",")
+			requestedScopes = authRequest.extractedScopes()
 
 		requestedScopes.each {
 			if (apiInfo?.scopes?.contains(it)){

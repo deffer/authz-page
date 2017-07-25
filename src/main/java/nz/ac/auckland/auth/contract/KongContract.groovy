@@ -2,6 +2,7 @@ package nz.ac.auckland.auth.contract
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import groovyx.net.http.ContentType
+import groovyx.net.http.EncoderRegistry
 import groovyx.net.http.HTTPBuilder
 import groovyx.net.http.Method
 import nz.ac.auckland.auth.formdata.AuthRequest
@@ -37,11 +38,27 @@ class KongContract {
 	@Value('${kong.proxy.url}')
 	private String kongProxyUrl // ="https://api.dev.auckland.ac.nz/service";
 
-	@Value('${kong.admin.key}')
-	private String kongAdminKey = "none";
+	@Value('${kong.admin.key:}')
+	private String kongAdminKey
 
-	@Value('${as.log.verbose}')
-	private static boolean verboseLogs = true
+	@Value('${as.log.verbose:false}')
+	private static boolean verboseLogs
+
+
+	public HTTPBuilder newBuilder(String url){
+		HTTPBuilder http = new HTTPBuilder(url)
+
+		// This is required on Windows since the default encoder will be forced to Win1251 otherwise
+		EncoderRegistry encoder = new EncoderRegistry( )
+		encoder.setCharset('utf-8')
+		http.encoderRegistry = encoder
+
+
+		if (kongAdminKey && kongAdminKey != "none")
+			http.setHeaders(["apikey": kongAdminKey])
+
+		return http
+	}
 
 	public static String joinUrls(String base, String... parts){
 		if ((!parts) || parts.length==0)
@@ -180,46 +197,49 @@ class KongContract {
 	 */
 	public Map getMap(String fullUrl){
 		Map map = [:]
-		def http = new HTTPBuilder(fullUrl)
+		HTTPBuilder http = newBuilder(fullUrl)
 		if (verboseLogs) logger.info("Calling "+http.uri)
-		http.request(Method.GET, ContentType.JSON) {
-			requestContentType = ContentType.JSON
-			//body = queryData
-			if (kongAdminKey && kongAdminKey!="none")
-				headers = [apikey: kongAdminKey]
+		try {
+			http.request(Method.GET, ContentType.JSON) {
+				requestContentType = ContentType.JSON
 
-			response.success = handler.rcurry({resp, reader->
-				if (reader instanceof Map)
-					map = reader
-			})
-			response.failure = handler.rcurry({resp, reader->
-				logger.error("Error calling ${http.uri}:"+reader)
-			})
+				response.success = handler.rcurry({ resp, reader ->
+					if (reader instanceof Map)
+						map = reader
+				})
+				response.failure = handler.rcurry({ resp, reader ->
+					logger.error("Error calling ${http.uri}:" + reader)
+				})
+			}
+		}catch (Throwable e){
+			logger.error(e.getMessage(), e)
+			return [:]
 		}
-
 		return map
 	}
 
 	public int deleteResource(String resource){
 		int result = 200
-		def http = new HTTPBuilder(resource)
+		HTTPBuilder http = newBuilder(resource)
 		if (verboseLogs)
 			logger.info("Calling DELETE on ${http.uri}")
-		http.request(Method.DELETE, ContentType.TEXT, {req->
+		try {
+			http.request(Method.DELETE, ContentType.TEXT, { req ->
 
-			if (kongAdminKey && kongAdminKey!="none")
-				headers = [apikey: kongAdminKey]
+				response.success = handler.rcurry({ resp, reader ->
+					result = resp.status ? (resp.status as Integer) : 400
+				})
 
-			response.success = handler.rcurry({resp, reader->
-				result = resp.status? (resp.status as Integer) : 400
+				response.failure = handler.rcurry({ resp, reader ->
+					result = resp.status ? (resp.status as Integer) : 400
+					logger.error("Error calling DELETE on ${http.uri}: code " + result)
+				})
 			})
-
-			response.failure = handler.rcurry({resp, reader->
-				result = resp.status? (resp.status as Integer) : 400
-				logger.error("Error calling DELETE on ${http.uri}: code "+result)
-			})
-		})
-		return result;
+			return result;
+		}catch (Throwable e){
+			logger.error(e.getMessage(), e)
+			return 502
+		}
 	}
 
 	/**
@@ -256,7 +276,13 @@ class KongContract {
 
 	ApiInfo getApiInfo(String apiId){
 		final ObjectMapper mapper = new ObjectMapper();
-		ApiInfo result = mapper.convertValue(getMap(apiInfoQuery(apiId)), ApiInfo.class)
+		ApiInfo result
+		try {
+			result = mapper.convertValue(getMap(apiInfoQuery(apiId)), ApiInfo.class)
+		}catch (Throwable e){
+			logger.error("Exception while connecting to API Gateway: ${e.getMessage()}", e)
+			return null
+		}
 		if ((!result) || !(result.id))
 			return result
 		Map pluginInfo = getMap(listApiPluginsQuery(apiId))
@@ -274,7 +300,7 @@ class KongContract {
 			--header "Authorization: Basic czZCaGRSa3F0MzpnWDFmQmF0M2JW" \
 			--data "client_id=XXX" \
 			--data "response_type=XXX" \
-			--data "scope=XXX" \
+			--data "scope=abc cds xcv" \
 			--data "provision_key=XXX" \
 			--data "authenticated_userid=XXX"
 		*/
@@ -291,12 +317,12 @@ class KongContract {
 		Map result = [:]
 		String scopes = ""
 		if (authRequest.scope)
-			scopes = authRequest.scope.replaceAll(',', ' ')
+			scopes = authRequest.extractedScopes().join(" ") // or with comma if its kong 0.9.x
 		else if (apiInfo?.scopes?.contains("default"))
 			scopes = "default"
 
 		// perform a POST request, expecting JSON response (redirect url)
-		def http = new HTTPBuilder(submitTo)
+		HTTPBuilder http = newBuilder(submitTo)
 		logger.info("User $authenticatedUserId has authorized ${authRequest.client_id} to access ${apiInfo.request_path}")
 		if (verboseLogs) logger.info("Calling ${http.uri} with scopes $scopes and user $authenticatedUserId for client ${authRequest.client_id}")
 		http.request(Method.POST, ContentType.JSON) {
@@ -304,10 +330,6 @@ class KongContract {
 			body = [client_id: authRequest.client_id, response_type: authRequest.response_type,
 			        scope    : scopes, provision_key: apiInfo.provisionKey,
 			        authenticated_userid: authenticatedUserId] // MUST use authenticatedUserId of SSO user
-
-			if (kongAdminKey && kongAdminKey!="none")
-				headers = [apikey: kongAdminKey]
-
 
 			// response handler for a success response code
 			response.success = handler.rcurry({resp, reader->
@@ -320,7 +342,7 @@ class KongContract {
 				if (reader instanceof Map)
 					result.putAll(reader)
 
-				logger.error(reader)
+				logger.error(reader.toString())
 			})
 		}
 		return result

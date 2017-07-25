@@ -47,6 +47,8 @@ Start your server from Intellij IDEA as maven springboot plugin with the goal `s
 You can view the application by navigating to
 http://localhost:8090/identity/oauth2/authorize?client_id=uoa-explorer-client&response_type=token
 
+Or set the `as.development=true`, navigate to http://localhost:8090/ and find test links at the bottom of the page 
+
 You can change the port in application.properties.
 
 The properties files will be looked up in:
