@@ -217,7 +217,7 @@ public class AuthorizationController {
 			model.addAttribute("user_id", userId);
 			model.addAttribute("map", authRequest);
 			model.addAttribute("provision_key", apiInfo.provisionKey);
-			model.addAttribute("submitTo", kong.authorizeUrl(apiInfo.request_path));
+			model.addAttribute("submitTo", kong.authorizeUrl(apiInfo.selectRequestPath()));
 			model.addAttribute("kongResponse", kongResponseObj.toString());
 
 			return "temp";
@@ -225,7 +225,7 @@ public class AuthorizationController {
 			logger.error("Unexpected error (kong response has no redirect, status ${kongResponseObj?.status})")
 			model.addAttribute("user_id", userId);
 			model.addAttribute("provision_key", apiInfo.provisionKey);
-			model.addAttribute("submitTo", kong.authorizeUrl(apiInfo.request_path));
+			model.addAttribute("submitTo", kong.authorizeUrl(apiInfo.selectRequestPath()));
 			model.addAttribute("kongResponse", kongResponseObj.toString());
 
 			return "uoa-error";

@@ -1,6 +1,7 @@
 package nz.ac.auckland.auth.contract
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import org.springframework.boot.autoconfigure.web.DefaultErrorAttributes
 
 // API info returned by Kong
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -34,8 +35,15 @@ class ApiInfo {
 	 */
 	String id
 	String upstream_url
+
+	@Deprecated
 	String request_path
+
+	@Deprecated
 	String strip_request_path
+
+	List<String> uris
+	String strip_uri
 	String name
 	String created_at
 	String preserve_host
@@ -43,6 +51,13 @@ class ApiInfo {
 	// will be populated after a call to oauth2 plugin
 	String provisionKey
 	List<String> scopes
+
+	public String selectRequestPath(){
+		if (uris)
+			return uris[0]
+		else
+			return request_path
+	}
 
 	// plugin info can be retrieved by calling http://localhost:8001/apis/pcfdev-oauth/plugins
 	// and the result would be

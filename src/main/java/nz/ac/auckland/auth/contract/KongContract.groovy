@@ -44,6 +44,7 @@ class KongContract {
 	@Value('${as.log.verbose:false}')
 	private static boolean verboseLogs
 
+	public int kongVersion = 9;
 
 	public HTTPBuilder newBuilder(String url){
 		HTTPBuilder http = new HTTPBuilder(url)
@@ -242,6 +243,19 @@ class KongContract {
 		}
 	}
 
+	public int getKongVersion(){
+		try {
+			Map rootResponse = getMap(kongAdminUrl)
+			if (rootResponse && rootResponse.version && rootResponse.matches(/0\.\d+\.\d+/)) {
+				String ver = ((String) rootResponse.version).tokenize('.')[1]
+				kongVersion = Integer.getInteger(ver)
+			}
+		}catch (Throwable t){
+			logger.error(t.getMessage(), t)
+		}
+		return kongVersion
+	}
+
 	/**
 	 * Returns information about client application (Application name, groups consumer belongs to, etc)
 	 * @param clientId client_id as it was passed by a client application
@@ -307,7 +321,7 @@ class KongContract {
 
 		// todo when Mashape fixes the error with redirectUri, use the one passed in here
 
-		String submitTo = authorizeUrl(apiInfo.request_path)
+		String submitTo = authorizeUrl(apiInfo.selectRequestPath())
 
 		if (authRequest.state)
 			submitTo += "?state=${URLEncoder.encode(authRequest.state, 'UTF-8')}"
@@ -316,14 +330,17 @@ class KongContract {
 		//   we should assume 'default' scope if nothing else is passed and api accepts default
 		Map result = [:]
 		String scopes = ""
-		if (authRequest.scope)
-			scopes = authRequest.extractedScopes().join(" ") // or with comma if its kong 0.9.x
-		else if (apiInfo?.scopes?.contains("default"))
+		if (authRequest.scope){
+			if (getKongVersion()==9)
+				scopes = authRequest.extractedScopes().join(" ") // or with comma if its kong 0.10.x
+			else
+				scopes = authRequest.extractedScopes().join(",")
+		} else if (apiInfo?.scopes?.contains("default"))
 			scopes = "default"
 
 		// perform a POST request, expecting JSON response (redirect url)
 		HTTPBuilder http = newBuilder(submitTo)
-		logger.info("User $authenticatedUserId has authorized ${authRequest.client_id} to access ${apiInfo.request_path}")
+		logger.info("User $authenticatedUserId has authorized ${authRequest.client_id} to access ${apiInfo.selectRequestPath()}")
 		if (verboseLogs) logger.info("Calling ${http.uri} with scopes $scopes and user $authenticatedUserId for client ${authRequest.client_id}")
 		http.request(Method.POST, ContentType.JSON) {
 			requestContentType = ContentType.URLENC
