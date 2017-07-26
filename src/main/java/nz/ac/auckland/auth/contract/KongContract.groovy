@@ -248,6 +248,7 @@ class KongContract {
 			Map rootResponse = getMap(kongAdminUrl)
 			if (rootResponse && rootResponse.version && rootResponse.version.matches(/0\.\d+\.\d+/)) {
 				String ver = ((String) rootResponse.version).tokenize('.')[1]
+				logger.debug("Extracted version $ver from Kong response\n"+rootResponse.toString())
 				kongVersion = Integer.getInteger(ver)
 			}
 		}catch (Throwable t){
