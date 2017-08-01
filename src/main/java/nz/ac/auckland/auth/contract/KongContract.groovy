@@ -331,12 +331,9 @@ class KongContract {
 		//   we should assume 'default' scope if nothing else is passed and api accepts default
 		Map result = [:]
 		String scopes = ""
-		if (authRequest.scope){
-			if (getKongVersion()==9)
-				scopes = authRequest.extractedScopes().join(" ") // or with comma if its kong 0.10.x
-			else
-				scopes = authRequest.extractedScopes().join(",")
-		} else if (apiInfo?.scopes?.contains("default"))
+		if (authRequest.scope)
+			scopes = authRequest.extractedScopes().join(" ") 
+		else if (apiInfo?.scopes?.contains("default"))
 			scopes = "default"
 
 		// perform a POST request, expecting JSON response (redirect url)
