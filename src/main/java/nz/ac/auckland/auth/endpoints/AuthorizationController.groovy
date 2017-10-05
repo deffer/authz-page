@@ -2,7 +2,8 @@ package nz.ac.auckland.auth.endpoints
 
 
 import nz.ac.auckland.auth.contract.KongContract
-import nz.ac.auckland.auth.contract.ApiInfo;
+import nz.ac.auckland.auth.contract.ApiInfo
+import nz.ac.auckland.auth.contract.Token;
 import nz.ac.auckland.auth.formdata.AuthRequest
 import nz.ac.auckland.auth.contract.ClientInfo
 import org.slf4j.Logger
@@ -43,7 +44,7 @@ public class AuthorizationController {
 	private String msgNoScopeDescription = "Scope description is not available"
 
 	@Value('${as.message.scopeNotAllowed}')
-	private String msgScopeNotAllowed = "This scope is not available in this context. This is a problem with consumer application."
+	private String msgScopeNotAllowed = "This scope is not available in this context. This indicates a problem with consumer application."
 
 
 	private static final Logger logger = LoggerFactory.getLogger(AuthorizationController.class);
@@ -68,7 +69,6 @@ public class AuthorizationController {
 		return renderAuthForm(userId, userName, apiId, authRequest, model);
 	}
 
-	// http://localhost:8090/pcfdev-oauth/auth?client_id=irina_oauth2_pluto&response_type=code&scope=read,write
 	private String renderAuthForm(String userId, String userName, String apiId, AuthRequest authRequest, Model model){
 
 		if (!sanitizeRequestParameters(authRequest, userId, model)) {
@@ -108,13 +108,16 @@ public class AuthorizationController {
 			if (isOkToAutoGrant(clientInfo, authRequest)){
 				// that's our internal university client application.
 				// we trust it (and so does the user) as long as the app location is registered and not overridden in request
-				Map kongResponse = kong.submitAuthorization(userId, clientInfo.redirectUri,apiInfo, authRequest);
+				String callbackUri = clientInfo.determineCallback4AutoGrant(authRequest.redirect_uri)
+				Map kongResponse = kong.submitAuthorization(userId, callbackUri,apiInfo, authRequest);
 				return makeCallback(kongResponse, authRequest, clientInfo, model, null) // null - do NOT override callbackUri
 			}
 
-			if (!isOkToRedirect(authRequest, clientInfo, model)){
+			def canRedirect = isOkToRedirect(authRequest, clientInfo)
+			if (!canRedirect.ok)
 				model.addAttribute("clientError", "callback_match")
-			}
+			else if (canRedirect.warning)
+				model.addAttribute("clientWarning", canRedirect.warning)
 
 
 			URI uri = new URI(authRequest.redirect_uri)
@@ -162,7 +165,7 @@ public class AuthorizationController {
 	}
 
 
-	private boolean validateId(String input){
+	private static boolean validateId(String input){
 		return input && (input ==~ /[a-zA-Z0-9\-_]+$/)
 	}
 
@@ -199,19 +202,35 @@ public class AuthorizationController {
 
 		// if different redirectUri is passed, check whether it is allowed for this client. i.e.
 		//    if (authRequest.redirect_uri != clientInfo.redirectUri
-		//     && !clientInfo.groups.contains(KongContract.GROUP_DYNAMIC_CLIENT)){
-		if (!isOkToRedirect(authRequest, clientInfo, model)){
-			logger.warn("Mismatched callback uri: passed '${authRequest.redirect_uri}' expected '${clientInfo.redirectUri}'")
+		//     && !clientInfo.groups.contains(KongContract.GROUP_DYNAMIC_CLIENT)) then error
+		def canRedirect = isOkToRedirect(authRequest, clientInfo)
+		if (!canRedirect.ok){
+			logger.warn("Mismatched callback uri: passed '${authRequest.redirect_uri}' expected '${clientInfo.redirectUris[0]}'")
 			model.addAttribute("user_id", userId);
 			model.addAttribute("map", authRequest);
 			return "uoa-error";
+		}  else if (canRedirect.warning) {
+			model.addAttribute("clientWarning", canRedirect.warning)
 		}
 
-		// if redirectUri is overridden and it is allowed, set it here
-		String redirectUri = authRequest.redirect_uri
+		// if redirectUri is overridden (and it is allowed), remember that
+		boolean callbackIsDifferent =  (authRequest.redirect_uri && !clientInfo.redirectUris.contains(authRequest.redirect_uri))
+		String redirectUriKongCompliant = callbackIsDifferent? null: authRequest.redirect_uri
 
 		// now we need to inform Kong that user authenticatedUserId grants authorization to application cliend_id
-		Map kongResponseObj = kong.submitAuthorization(forUser, redirectUri, apiInfo, authRequest);
+		Map kongResponseObj = kong.submitAuthorization(forUser, redirectUriKongCompliant, apiInfo, authRequest);
+
+		Map rememberMeResponse = null
+
+		if (kongResponseObj.redirect_uri && !canRedirect.warning && !hideRememberMe
+				&& authRequest.remember && authRequest.remember!="none"){
+			// todo remove all consents which are shorter than this one
+
+			// create new consent token
+			String scopes = authRequest.extractedScopes().join(" ")?:"default"
+			Token consentToken = Token.generateConsentToken(2592000l, forUser, scopes, apiInfo.id, clientInfo.id)
+			rememberMeResponse = kong.saveToken(consentToken)
+		}
 
 		if (development && authRequest.actionDebug) {
 			model.addAttribute("user_id", userId);
@@ -219,6 +238,8 @@ public class AuthorizationController {
 			model.addAttribute("provision_key", apiInfo.provisionKey);
 			model.addAttribute("submitTo", kong.authorizeUrl(apiInfo.selectRequestPath()));
 			model.addAttribute("kongResponse", kongResponseObj.toString());
+			if (rememberMeResponse)
+				model.addAttribute("RememberMe was saved as "+ JsonHelper.serialize(rememberMeResponse))
 
 			return "temp";
 		} else if(!(kongResponseObj.redirect_uri)) {
@@ -230,8 +251,8 @@ public class AuthorizationController {
 
 			return "uoa-error";
 		} else {
-			String overrideCallback = authRequest.redirect_uri != clientInfo.redirectUri? authRequest.redirect_uri:null;
-			String returnCallback = makeCallback(kongResponseObj, authRequest, clientInfo, model, overrideCallback)
+			String returnCallback = makeCallback(kongResponseObj, authRequest, clientInfo, model,
+					callbackIsDifferent? authRequest.redirect_uri : null)
 			return returnCallback
 		}
 	}
@@ -254,57 +275,68 @@ public class AuthorizationController {
 	 *
 	 * Redirect override is allowed under next conditions:
 	 *   - first, client MUST be in the Kong group system-dynamic-client
-	 *   - overridden callback MUST be on the same domain as registered one OR if we are in DEV it could be localhost
+	 *   - overridden callback MUST be on the same domain as registered one OR localhost
 	 *
 	 * @param authRequest what was passed in teh request. contains new redirect_uri (if passed)
 	 * @param clientInfo whats registered for this client in Kong
 	 * @param model can be empty, as in the case of calling this method before issuing a final redirect.
 	 * @return
 	 */
-	private boolean isOkToRedirect(AuthRequest authRequest, ClientInfo clientInfo, Model model){
-		if ( (!authRequest.redirect_uri) || authRequest.redirect_uri==clientInfo.redirectUri) {
-			authRequest.redirect_uri = clientInfo.redirectUri
-			return true
+	private def isOkToRedirect(AuthRequest authRequest, ClientInfo clientInfo){
+		if ( (!authRequest.redirect_uri) || clientInfo.redirectUris.contains(authRequest.redirect_uri)) {
+			authRequest.redirect_uri = authRequest.redirect_uri?:clientInfo.redirectUris[0]
+			return [ok:true]
 		} else {
 
 			if (clientInfo.groups.contains(KongContract.GROUP_AUTH_GRANTED)) {
-				model?.addAttribute("clientWarning", clientInfo.redirectUri)
-				return false; // should never be reached as this condition must be captured earlier
+				return [ok:false,warning: clientInfo.redirectUris[0]]; // should never be reached as this condition must be captured earlier
 			}
 
 			if (!clientInfo.groups.contains(KongContract.GROUP_DYNAMIC_CLIENT)) {
-				model?.addAttribute("clientWarning", clientInfo.redirectUri)
 				//model.addAttribute("clientError", "callback_match") // will be added outside of this func
-				return false
+				return [ok:false, warning: clientInfo.redirectUris[0]]
 			}
 
-			// test url itself. the host must be localhost, or must match the registered one
+			// at this point we know its a "dynamic" client who needs to override url
+			// test the host of the new url. the host must be localhost, or must match one of the registered ones
 			URI newUri = new URI(authRequest.redirect_uri)
 			if (newUri.getHost()?.equalsIgnoreCase("localhost"))
-				return true;
+				return [ok:true]
 
-			URI registeredUri = new URI(clientInfo.redirectUri)
+			// search if there is a matching host. show warning if the only match is for non-trusted hosts
+			List<String> foundWithWarning = [] // should make it bool?
+			List<String> trustedHosts = Arrays.asList(trustedRedirectHosts)
+			boolean foundWithoutWarning = false
+			clientInfo.redirectUris.each { redirectUri ->
+				URI registeredUri = new URI(redirectUri)
 
-			if (KongContract.hostMatch(newUri, registeredUri)){
-				//decide if need to show warning
-				if (!KongContract.hostMatchAny(newUri, Arrays.asList(trustedRedirectHosts)))
-					model?.addAttribute("clientWarning", clientInfo.redirectUri)
-				return true
-			}else {
-				model?.addAttribute("clientWarning", clientInfo.redirectUri)
-				return false
+				if (KongContract.hostMatch(newUri, registeredUri)) {
+					// if its not a trusted host, its still valid but need to show warning to a user
+					if (!KongContract.hostMatchAny(newUri, trustedHosts))
+						foundWithWarning.add(redirectUri)
+					else
+						foundWithoutWarning = true
+				} else {
+					// ignore this host as it doesnt match
+				}
 			}
+
+			if (foundWithoutWarning)
+				return [ok:true]
+
+			// if we are here, there was no perfect match
+			return [ok: !foundWithWarning.isEmpty(), warning: clientInfo.redirectUris[0]]
 		}
 	}
 
 	/**
-	 * Complex logic to support Kong 0.8 and above (in 0.8 url fragments didnt work)ю
+	 * Complex logic to support Kong 0.8 and above (in 0.8 url fragments didnt work)
 	 * This method will be much smaller if we drop support of 0.8
 	 * @param kongResponseObject
 	 * @param authRequest
 	 * @param clientInfo
 	 * @param model
-	 * @param overrideCallback
+	 * @param overrideCallback if set, the url in kongResponseObject will be replaced with this value
 	 * @return
 	 */
 	public static String makeCallback(Map kongResponseObject, AuthRequest authRequest, ClientInfo clientInfo, Model model, String overrideCallback){
@@ -369,7 +401,8 @@ public class AuthorizationController {
 			return "uoa-error"
 		}
 
-		String clientCallbackUrl = clientInfo.redirectUri+"?error=access_denied&error_description=The+user+has+denied+the+access";
+		String callbackUri = authRequest.redirect_uri?:clientInfo.redirectUris[0]
+		String clientCallbackUrl = callbackUri+"?error=access_denied&error_description=The+user+has+denied+the+access";
 
 		return "redirect:" + clientCallbackUrl;
 	}

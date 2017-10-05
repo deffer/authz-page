@@ -5,6 +5,7 @@ import groovyx.net.http.ContentType
 import groovyx.net.http.EncoderRegistry
 import groovyx.net.http.HTTPBuilder
 import groovyx.net.http.Method
+import nz.ac.auckland.auth.endpoints.JsonHelper
 import nz.ac.auckland.auth.formdata.AuthRequest
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -92,8 +93,17 @@ class KongContract {
 	}
 
 	public String listUserTokensQuery(String userId){
-		return joinUrls(kongAdminUrl, OP_LIST_TOKENS)+"?authenticated_userid=$userId"
+		return joinUrls(kongAdminUrl, OP_LIST_TOKENS)+"?authenticated_userid=$userId&size=400"
 	}
+
+	public String listSpecialConsentTokensQuery(String userFormatted, String clientAppId=null){
+		long expiresIn = 0
+		if (clientAppId)
+			return joinUrls(kongAdminUrl, OP_LIST_TOKENS)+"?authenticated_userid=$userFormatted&credential_id=$clientAppId&expires_in=$expiresIn"
+		else
+			return joinUrls(kongAdminUrl, OP_LIST_TOKENS)+"?authenticated_userid=$userFormatted&expires_in=$expiresIn"
+	}
+
 
 	public String getTokenQuery(String id){
 		return joinUrls(kongAdminUrl, OP_LIST_TOKENS, id)
@@ -219,6 +229,32 @@ class KongContract {
 		return map
 	}
 
+	public Map getConsentTokens(String userId, String clientAppId=null){
+		return getMap(listSpecialConsentTokensQuery(userId+Token.CONSENT_USER_SUFFIX, clientAppId))
+	}
+
+	public List<Token> getTokens4User(String userId){
+		List<Token> result = []
+		Map accessTokens = getMap(listUserTokensQuery(userId))
+		Map consentTokens = getMap(listSpecialConsentTokensQuery(userId+Token.CONSENT_USER_SUFFIX))
+		accessTokens?.data?.each {Map tokenData->
+			Token token = JsonHelper.convert(tokenData, Token.class)
+			token.consentToken = Boolean.FALSE
+			result.add(token)
+		}
+		consentTokens?.data?.each {Map tokenData->
+			Token token = JsonHelper.convert(tokenData, Token.class)
+			token.init()
+			if (token.isConsentToken())
+				result.add(token)
+			else {
+				logger.warn("Consent token integrity error for token ${token.id}, adding to normal set")
+				result.add(token)
+			}
+		}
+		return result
+	}
+
 	public int deleteResource(String resource){
 		int result = 200
 		HTTPBuilder http = newBuilder(resource)
@@ -290,10 +326,9 @@ class KongContract {
 
 
 	ApiInfo getApiInfo(String apiId){
-		final ObjectMapper mapper = new ObjectMapper();
 		ApiInfo result
 		try {
-			result = mapper.convertValue(getMap(apiInfoQuery(apiId)), ApiInfo.class)
+			result = JsonHelper.convert(getMap(apiInfoQuery(apiId)), ApiInfo.class)
 		}catch (Throwable e){
 			logger.error("Exception while connecting to API Gateway: ${e.getMessage()}", e)
 			return null
@@ -320,8 +355,6 @@ class KongContract {
 			--data "authenticated_userid=XXX"
 		*/
 
-		// todo when Mashape fixes the error with redirectUri, use the one passed in here
-
 		String submitTo = authorizeUrl(apiInfo.selectRequestPath())
 
 		if (authRequest.state)
@@ -332,7 +365,7 @@ class KongContract {
 		Map result = [:]
 		String scopes = ""
 		if (authRequest.scope)
-			scopes = authRequest.extractedScopes().join(" ") 
+			scopes = authRequest.extractedScopes().join(" ")
 		else if (apiInfo?.scopes?.contains("default"))
 			scopes = "default"
 
@@ -340,11 +373,16 @@ class KongContract {
 		HTTPBuilder http = newBuilder(submitTo)
 		logger.info("User $authenticatedUserId has authorized ${authRequest.client_id} to access ${apiInfo.selectRequestPath()}")
 		if (verboseLogs) logger.info("Calling ${http.uri} with scopes $scopes and user $authenticatedUserId for client ${authRequest.client_id}")
+		def theBody = [client_id: authRequest.client_id, response_type: authRequest.response_type,
+		            scope    : scopes, provision_key: apiInfo.provisionKey,
+		            authenticated_userid: authenticatedUserId] // MUST use authenticatedUserId of SSO user
+
+		if (redirectUri) // note, this should match one of the registered ones exactly, or Kong will reject it
+			theBody.redirect_uri = redirectUri
+
 		http.request(Method.POST, ContentType.JSON) {
 			requestContentType = ContentType.URLENC
-			body = [client_id: authRequest.client_id, response_type: authRequest.response_type,
-			        scope    : scopes, provision_key: apiInfo.provisionKey,
-			        authenticated_userid: authenticatedUserId] // MUST use authenticatedUserId of SSO user
+			body = theBody
 
 			// response handler for a success response code
 			response.success = handler.rcurry({resp, reader->
@@ -363,4 +401,32 @@ class KongContract {
 		return result
 	}
 
+	Map saveToken(Token token) {
+		HTTPBuilder http = newBuilder(joinUrls(kongAdminUrl, OP_LIST_TOKENS))
+		logger.info("Saving consent for ${token.authenticated_userid} client ${token.credential_id} as access_token ${token.access_token}")
+
+		def theBody = JsonHelper.serialize(token)
+
+		Map result = [:]
+
+		http.request(Method.POST, ContentType.JSON) {
+			requestContentType = ContentType.JSON
+			body = theBody
+
+			// response handler for a success response code
+			response.success = handler.rcurry({resp, reader->
+				result.put("status", resp.status)
+				if (reader instanceof Map)
+					result.putAll(reader)
+			})
+			response.failure = handler.rcurry({resp, reader->
+				result.put("status", resp.status)
+				if (reader instanceof Map)
+					result.putAll(reader)
+
+				logger.error(reader.toString())
+			})
+		}
+		return result
+	}
 }

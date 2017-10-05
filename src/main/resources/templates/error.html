@@ -1,0 +1,139 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="${title != null} ? ${title} : 'Unexpected Server Error'"></title>
+    <meta name="user_id" th:attr="content=${user_id}"/>
+    <!-- Bootstrap -->
+    <!--link href="css/bootstrap.min.css" rel="stylesheet"-->
+
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"
+          integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous"/>
+
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css"
+          integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous"/>
+
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"
+            integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS"
+            crossorigin="anonymous"></script>
+
+    <link href="/static/css/master.css" rel="stylesheet" type="text/css" />
+
+    <style type="text/css">
+        #sub-container, #sub-container p { font-size: 9pt; }
+        h1 {
+            margin-top: 12pt;
+            margin-bottom: 12pt;
+            border-bottom: 4px solid #cccccc;
+        }
+        #middleBar > h1:first-child { margin-top: 0; }
+        h5 {
+            color: #014f8a;
+            font-size: 100%;
+            line-height: 140%;
+            margin-bottom: 6pt;
+        }
+        a { text-decoration: none; }
+        p { margin-bottom: 12pt; }
+        table b { color: #014f8a; }
+        #mastFooter p { margin-bottom: 0; }
+        #middleBar {
+            width: auto;
+            padding-top: 10pt;
+            padding-bottom: 20pt;
+        }
+        ul.plain {
+            list-style: none;
+            margin-left: 0;
+            padding-left: 0;
+        }
+        ul.plain li { margin-bottom: 3pt; }
+    </style>
+</head>
+<body>
+<a name="top"></a>
+<div id="main">
+
+    <div id="masthead" style="background:url(/static/images/clouds.jpg)">
+        <a href="http://www.auckland.ac.nz" title="the University of Auckland"><img src="/static/images/logo.png" id="logo" border="0" alt="the University of Auckland"/></a>
+
+        <div id="searchBox">
+            <a href="http://www.auckland.ac.nz/uoa/home/about/the-university/uoa-contact-us" class="white" id="headerContactUs" title="Contact us">Contact us</a>
+            <a href="http://uoa.custhelp.com" class="white" id="askauckland"><strong>Ask</strong>Auckland <img src="/static/images/cursor.gif" alt=""/></a>
+
+            <form name="searchform" id="searchForm" method="get" action="http://search.auckland.ac.nz/search">
+                <input type="hidden" name="site" value="default_collection"/>
+                <input type="hidden" name="client" value="default_frontend"/>
+                <input type="hidden" name="proxystylesheet" value="default_frontend"/>
+                <input type="hidden" name="proxyreload" value="0"/>
+                <input type="hidden" name="output" value="xml_no_dtd"/>
+                <input name="q" type="text" id="headerKeyword" value="enter keywords" maxlength="100" onfocus="if (this.value==this.defaultValue) this.value='';" onblur="if (this.value=='') this.value=this.defaultValue;"/>
+                <input type="button" value="Search" id="headerSubmit"/>
+            </form>
+        </div>
+        <div class="clear"> </div>
+    </div>
+
+    <div id="sub-container" class="container">
+        <div id="middleBar" class="middleColumn" style="background: none; padding-left: 350px; background: url(/static/images/clocktower.jpg) no-repeat 0 20px; min-height: 500px;">
+
+            <h1 class="blue1 b4" >Unexpected Server Error</h1>
+            <!--p th:text="${text != null} ? ${text}"></p-->
+            <p>Something went terribly wrong. There must be more information in the logs.</p>
+            <div class="clear"> </div>
+            <h1 class="blue1 b4">Contact information for staff</h1>
+            <p><strong>Staff Service Centre</strong></p>
+            <p>Web: <a href="https://superuoa.custhelp.com/app/ask">SSC Portal</a><br />
+                Email: <a href="mailto:staffservice@auckland.ac.nz">staffservice@auckland.ac.nz</a><br />
+                Phone:  ext 86000 or +64 9 923 6000</p>
+
+            <h1 class="blue1 b4">Contact information for students</h1>
+
+            <p><strong>New Zealand residents</strong></p>
+            <p>Email: <a href="mailto:studentinfo@auckland.ac.nz">studentinfo@auckland.ac.nz</a><br />
+                Phone: 0800 61 62 63</p>
+
+            <p><strong>International students</strong></p>
+            <p>Email: <a href="mailto:studentinfo@auckland.ac.nz">studentinfo@auckland.ac.nz</a><br />
+                Phone: +64 9 373 7513</p>
+
+            <p><strong>0800 373 7550</strong> or <strong>966</strong> for 24-hour emergency telephone number.
+                <br />
+                For more contact details, please visit the University <a href="https://www.auckland.ac.nz/en/about/the-university/uoa-contact-us.html">contact us page</a>.
+            </p>
+        </div>
+    </div>
+
+
+    <div id="mastFooter">
+
+        <p id="copyright">
+            <a href="http://www.auckland.ac.nz/uoa/home/copyright" title="Copyright &copy; The University of Auckland " >Copyright &copy; The University of Auckland </a>
+        </p>
+
+        <p id="footerLogo">
+            <a href="http://www.wun.ac.uk/" title="WUN" target="_blank"><img src="/static/images/wun-logo-small.png" alt="WUN" /></a>
+            <a href="http://apru.nus.edu.sg/" title="APRU" target="_blank"><img src="/static/images/apru.png" alt="APRU" /></a>
+            <a href="http://www.universitas21.com/" title="Universitas" target="_blank"><img src="/static/images/universitas.png" alt="Universitas" /></a>
+        </p><p id="footerNav">
+
+        <a href="http://www.auckland.ac.nz/uoa/home/about/the-university/atoz-directory?utm_source=uoa-footerlink-atoz&amp;utm_medium=web-footerlink-1&amp;utm_campaign=footerlink-atoz" title="A to Z Directory" >A to Z Directory</a> |
+        <a href="http://www.auckland.ac.nz/uoa/home/site-map" title="Site map" >Site map</a> |
+        <a href="http://www.auckland.ac.nz/uoa/home/accessibility" title="Accessibility" >Accessibility</a> |
+        <a href="http://www.auckland.ac.nz/uoa/home/about/opportunities?utm_source=uoa-footerlink-careers&amp;utm_medium=web-footerlink-4&amp;utm_campaign=footerlink-careers" title="Careers" >Careers</a> |
+        <a href="http://www.auckland.ac.nz/uoa/home/copyright" title="Copyright" >Copyright</a> |
+        <a href="http://www.auckland.ac.nz/uoa/home/privacy" title="Privacy" >Privacy</a> |
+        <a href="http://www.auckland.ac.nz/uoa/home/disclaimer" title="Disclaimer" >Disclaimer</a>
+    </p>
+
+        <div class="clear"> </div>
+    </div>
+
+</div>
+
+<a name="bottom" />
+
+</body>
+</html>

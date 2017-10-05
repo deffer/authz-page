@@ -21,7 +21,7 @@
 						<span class="texthighlight" th:text="${appname}"></span>
 						would like to have authorization to access your data or call services on your behalf.
 						If you approve, authorization code will be sent to <span class="urlhighlight" th:text="${apphost}" th:title="${appurl}"></span>
-						This code can be used to access information about you or other data as indicated by requested scopes.
+						This code can be used to access information about you or other data as indicated by requested scopes below.
 					</p>
 
 					<div class="alert alert-warning" role="alert" th:if="${! #strings.isEmpty(clientWarning)}" id="div_warn_callback_override">
@@ -29,12 +29,14 @@
 						Do not accept his request if you don't trust application which sent you here.
 					</div>
 
-					<div th:if="${rememberme==true and #strings.isEmpty(clientWarning)}" class="row">
-						<div class="well col-xs-8">
+					<div th:if="${rememberme==true and #strings.isEmpty(clientWarning)}">
+						<hr/>
+						<div class="row">
+						<div class="col-xs-offset-1 col-xs-8">
 							<p class="margin-bottom-s">Remember this decision:</p>
 							<div>
 								<label for="remember-forever">
-									<input type="radio" name="remember" id="remember-forever" value="until-revoked" checked="checked"/>
+									<input type="radio" name="remember" id="remember-forever" value="until-revoked"/>
 									remember this decision until I revoke it
 									<i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
 									   title="You can revoke this access at any time from your Application pages"></i>
@@ -42,24 +44,26 @@
 							</div>
 							<div>
 								<label for="remember-day">
-									<input type="radio" name="remember" id="remember-day" value="one-hour"/>
+									<input type="radio" name="remember" id="remember-day" value="one-month"/>
 									remember this decision for one day
 									<i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
-									   title="The app will be able to use this access for 1 day only. You will be prompted again if app needs access after this period."></i>
+									   title="The app will be able to use this access for 1 month only. You will be prompted again if app needs access after this period."></i>
 								</label>
 							</div>
 							<div>
 								<label for="remember-not">
-									<input type="radio" name="remember" id="remember-not" value="none"/>
+									<input type="radio" name="remember" id="remember-not" value="none" checked="checked"/>
 									prompt me again next time
 									<i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
 									   title="You will be prompted again if app needs access."></i>
 								</label>
 							</div>
-							<div style="margin-top: 15px; text-align: center;">
+							<div style="margin-bottom: 15px;">
 								<a href="/self" target="_blank">View my tokens and applications</a>
 							</div>
 						</div>
+						</div>
+						<hr/>
 					</div>
 
 
@@ -130,7 +134,7 @@
 					<div class="panel">
 						<div class="panel-body">
 						<h4>Changing upi</h4>
-						<p> You can override <code>upi</code> of logged-in user</p>
+						<p> You can override <code>upi</code> of logged-in user. Type new UPI and press Allow, Deny, or Enter Debug</p>
 						<p><input type="text" th:field="*{user_id}"/></p>
 						</div>
 					</div>

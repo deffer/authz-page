@@ -2,6 +2,7 @@ package nz.ac.auckland.auth.endpoints
 
 import nz.ac.auckland.auth.contract.KongContract
 import nz.ac.auckland.auth.contract.ClientInfo
+import nz.ac.auckland.auth.contract.Token
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -24,6 +25,9 @@ class UserProfileController {
 	@Value('${as.log.verbose}')
 	private boolean verboseLogs = false
 
+	@Value('${as.development}')
+	private boolean development = false
+
 	@Autowired
 	KongContract kong
 
@@ -35,79 +39,91 @@ class UserProfileController {
 		String displayName = userName != "NULL"? userName :  "Unknown (${userId})"
 		model.addAttribute("name", displayName);
 
-		Map tokensResponse = getTokens(userId)
-		if (!tokensResponse.data) {
-			model.addAttribute("tokens", [:])
-			model.addAttribute("applications", [:])
-		}else {
-			prepareView(tokensResponse, model)
-		}
+		if ((!userId || userId == "NULL") && development)
+			userId = "user"
+
+
+		prepareView(userId, model)
 		return "self"
 	}
 
 	@RequestMapping(method = RequestMethod.DELETE, value="/self/token/{tokenId}")
 	public ResponseEntity<Void> token(@RequestHeader(value = "REMOTE_USER", defaultValue = "NULL") String userId,
 	                            @RequestHeader(value = "displayName", defaultValue = "NULL") String userName,
-	                            @PathVariable("tokenId") String accessToken, Model model) {
+	                            @PathVariable("tokenId") String tokenId, Model model) {
 
 		String displayName = userName != "NULL"? userName :  "Unknown (${userId})"
 		model.addAttribute("name", displayName);
+		if ((!userId || userId == "NULL") && development)
+			userId = "user"
 
-		Map token = getToken(accessToken)
+		Map token = getToken(tokenId, userId)
 
 		if (!token){
-			logger.warn("Unable to delete token - $accessToken is not found")
+			logger.warn("Unable to delete token - user $userId does not have a token $tokenId")
 			return new ResponseEntity<Void>(HttpStatus.NOT_FOUND)
 		}else{
-			if (token.authenticated_userid.equalsIgnoreCase(userId)) {
-				if (verboseLogs)
-					logger.info("Deleting the token of user $userId - $accessToken")
-				int code = kong.deleteResource(kong.getTokenQuery(accessToken))
-						//kong.joinUrls(kong.OP_LIST_TOKENS, token.access_token))
-				return new ResponseEntity<Void>(HttpStatus.valueOf(code))
-			}else {
-				logger.warn("Rejecting an unauthorized attempt to delete a token: User $userId is trying to delete token of ${token.authenticated_userid}")
-				return new ResponseEntity<Void>(HttpStatus.FORBIDDEN)
-			}
+			if (verboseLogs)
+				logger.info("Deleting the token of user $userId - $tokenId")
+			int code = kong.deleteResource(kong.getTokenQuery(tokenId))
+			return new ResponseEntity<Void>(HttpStatus.valueOf(code))
 		}
 	}
 
-	private void prepareView(Map tokensResponse, Model model) {
-		List tokens = tokensResponse.data // also 'total' and 'next'
-		Map apps = [:]
+	private void prepareView(String userId, Model model) {
+		List<Token> allTokens =  kong.getTokens4User(userId)
+		// note, tokens are paginated - have 'total' and 'next'
 
-		tokens.each { token ->
-			long issued = token.created_at
-			token.issuedStr = new Date(issued).format("yyyy-dd-MM")
-			token.issuedHint = new Date(issued).format("HH:mm:ss")
-			long expires = token.created_at + token.expires_in * 1000
-			token.expiresStr = new Date(expires).format("yyyy-dd-MM")
-			token.expiresHint = new Date(expires).format("HH:mm:ss")
-			String appId = token.credential_id
+
+		Map<String, ClientInfo> apps = [:]
+
+		List tokens = []
+		List consents = []
+
+		// here we going to add more fields to the Token object so we can display them
+		allTokens.each { Token kongToken ->
+			def displayToken = JsonHelper.convert(kongToken, HashMap.class)
+			long issued = kongToken.created_at
+			displayToken.issuedStr = new Date(issued).format("yyyy-dd-MM")
+			displayToken.issuedHint = new Date(issued).format("HH:mm:ss")
+			long expiresIn = kongToken.isConsentToken() ? kongToken.consentExpiresIn : kongToken.expires_in
+			if (expiresIn == 0l){
+				displayToken.expiresStr = "Never"
+				displayToken.expiresHint = ""
+			}else {
+				long expires = kongToken.created_at + expiresIn * 1000
+				displayToken.expiresStr = new Date(expires).format("yyyy-dd-MM")
+				displayToken.expiresHint = new Date(expires).format("HH:mm:ss")
+			}
+			String appId = kongToken.credential_id
 			if (!(apps[appId])) {
 				ClientInfo ci = kong.getClientFromCredentialsId(appId)
 				if (ci)
 					apps.put(appId, ci)
 			}
-			token.name = apps[appId]?.name
-			// it also has 'access_token'
+			displayToken.name = apps[appId]?.name
+			displayToken.callbacks = apps[appId]?.displayRedirects()
+			displayToken.host = apps[appId]?.redirectHost()
+			displayToken.access_token = kongToken.access_token
+			if (kongToken.isConsentToken()){
+				consents.add(displayToken)
+			}else
+				tokens.add(displayToken)
 		}
 
 		model.addAttribute("tokens", tokens)
-		model.addAttribute("applications", apps)
+		model.addAttribute("consents", consents)
+		//model.addAttribute("applications", apps)
 	}
 
-	private Map getTokens(String userId){
-		return kong.getMap(kong.listUserTokensQuery(userId))
-	}
-
-
-	private Map getToken(String accessToken){
-		if (!( accessToken ==~ /^[a-z\d]+$/ ))
+	private Map getToken(String tokenId, String userId){
+		if (!( tokenId ==~ /^[a-z\d\-]+$/ ))
 			return null
-		Map response = kong.getMap(kong.getTokenQuery(accessToken))
+		Map response = kong.getMap(kong.getTokenQuery(tokenId))
 		// either token, or {"message":"Not found"}
-		if (response && response.access_token?.equals(accessToken))
+		if (response &&
+				(response.authenticated_userid == userId
+				|| response.authenticated_userid == userId+Token.CONSENT_USER_SUFFIX))
 			return response
 		else
 			return null

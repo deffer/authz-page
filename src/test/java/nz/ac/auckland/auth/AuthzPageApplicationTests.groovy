@@ -32,7 +32,7 @@ public class AuthzPageApplicationTests {
 				redirect_uri: "")
 
 		ClientInfo clientInfo = new ClientInfo(clientId: "123", name: "App name", consumerId: "Bob",
-				redirectUri: "https://rs.dev.auckland.ac.nz/callback", // doesn't matter here
+				redirectUris: ["https://rs.dev.auckland.ac.nz/callback"], // doesn't matter here
 				groups:[])
 
 		// test CODE flow

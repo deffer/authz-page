@@ -4,9 +4,11 @@ package nz.ac.auckland.auth.contract;
 // Info about consumer and client application (credentials), as it is registered in Kong
 public class ClientInfo {
 
+	String id
 	String clientId // used to identify client application.
 	String name     // application name to display to a user
-	String redirectUri // a callback url where code/token is returned to
+	//String redirectUri // a callback url where code/token is returned to
+	List<String> redirectUris // a callback url where code/token can be returned to
 	String consumerId  // internal identifier of a consumer who owns application and credentials
 	Set<String> groups // acl info (groups) of the consumer who owns application and credentials
 
@@ -40,9 +42,10 @@ public class ClientInfo {
 			self.name = clientResponse.name
 			// was string, now its an array since Kong > 0.6
 			if (clientResponse.redirect_uri != null && !(clientResponse.redirect_uri instanceof String))
-				self.redirectUri = (String) clientResponse.redirect_uri[0];
+				self.redirectUris = new ArrayList<>(clientResponse.redirect_uri)
 			else
-				self.redirectUri = (String) clientResponse.redirect_uri;
+				self.redirectUris = [(String) clientResponse.redirect_uri];
+			self.id = clientResponse.id
 			self.clientId = clientResponse.client_id
 			self.consumerId = clientResponse.consumer_id
 			return true
@@ -66,9 +69,10 @@ public class ClientInfo {
 			consumerResponse["data"].each{Map it-> if (it.group != null) self.groups.add((String)it.group) }
 	}
 
+	// this is used from the view
 	public String redirectHost(){
 		try {
-			URI uri = new URI(redirectUri)
+			URI uri = new URI(redirectUris[0])
 			return (uri.getScheme() ? uri.getScheme() + "://" : "") + uri.getHost()
 		}catch (Exception e){
 			e.printStackTrace()
@@ -76,4 +80,19 @@ public class ClientInfo {
 		}
 	}
 
+	public String displayRedirects(){
+		return redirectUris.join(",")
+	}
+
+	/**
+	 * This method should return on of the registered callbacks
+	 * to guarantee the safety of auto-grant response.
+	 */
+	public String determineCallback4AutoGrant(String requestedUri){
+		if (redirectUris.contains(requestedUri))
+			return requestedUri
+
+		// todo find and return the one on teh same host as requestedUri
+		return redirectUris[0]
+	}
 }

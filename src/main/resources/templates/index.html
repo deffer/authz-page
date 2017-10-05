@@ -29,7 +29,7 @@
 			<p></p>
 			If you are a <strong>student</strong> using the application, make sure to check the url of the application website
 			matches the redirect url. Be aware that once you authorize (Allow) application, it will have access to your data
-			even when you are offline.
+			even when you are offline. You can view connected applications and active tokens <a href="/self" target="_blank">here</a>
 		</div>
 		<div th:if="${debug}">
 			<h3>Quick links for test</h3>
@@ -52,6 +52,14 @@
 			<div class="margin-top-m">
 				<a href="/identity-v2/oauth2/authorize?response_type=code&amp;redirect_uri=https://api.dev.auckland.ac.nz/explore/identity-v2-docs/o2c.html&amp;client_id=uoa-explorer-client&amp;scope=default,identity-read,identity-write">
 					Identity authorize code 3 scopes</a>
+			</div>
+			<div class="margin-top-m">
+				<a href="/identity-v2/oauth2/authorize?response_type=token&amp;redirect_uri=http://localhost:8080/app/o2c.html&amp;client_id=test-consent-client-id&amp;scope=default,identity-read">
+					Identity token for 2 scopes for external consumer with localhost</a>
+			</div>
+			<div class="margin-top-m">
+				<a href="/identity-v2/oauth2/authorize?response_type=token&amp;redirect_uri=https://changeme.com/callback/app/o2c.html&amp;client_id=test-rewrite-allowed-client&amp;scope=default,identity-read">
+					Identity token callback override (should show warning)</a>
 			</div>
 			<div class="margin-top-m">
 				<a href="/noapi-v2/oauth2/authorize?response_type=code&amp;redirect_uri=https://api.dev.auckland.ac.nz/explore/assessment-v2-docs/o2c.html&amp;client_id=uoa-explorer-client&amp;scope=assessment-read&amp;state=assessment_oauth_implicit">
