@@ -5,7 +5,7 @@
 <body>
 	<div th:replace="fragments/header :: header (name=${name})"></div>
 
-	<div class="container">
+	<div class="container uoa-container-large">
 		<div th:if="${!consents.isEmpty()}">
 			<h2>Connected Application</h2>
 			<!--p>These are sites you have approved manually. If the same site asks for the same access in the future, it will
@@ -14,13 +14,13 @@
 				<tr><th>Application</th><th>Url</th><th>Scopes</th><th>Granted on</th><th>Expires</th><th>Options</th></tr>
 				<tr th:each="app: ${consents}">
 					<td><span th:text="${app.name}" th:title="${app.access_token}"></span></td>
-					<td><span th:text="${app.host}" th:title="${app.value.displayRedirects()}"></span></td>
+					<td><span th:text="${app.host}" th:title="${app.callbacks}"></span></td>
 					<td><span th:text="${app.scope}"></span></td>
 					<td><span th:text="${app.issuedStr}"></span></td>
 					<td><span th:text="${app.expiresStr}"></span></td>
 					<td>
 						<a class="btn btn-xs" href="#" th:onclick="'deleteToken(\''+${app.id}+'\');'">
-							<span class="glyphicon glyphicon-trash disable-links"></span> Disconnect
+							<span class="glyphicon glyphicon-trash disable-links"></span> Remove
 						</a>
 					</td>
 				</tr>

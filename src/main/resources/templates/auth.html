@@ -4,7 +4,7 @@
 <body>
 	<div th:replace="fragments/header :: header (name=${name})"></div>
 
-	<div class="container">
+	<div class="container uoa-container">
 		<form action="#" th:action="@{/{apid}/auth/submit(apid=${apiid})}" th:object="${map}" method="post">
 			<!-- original request parameters, to pass on Submit -->
 			<input type="hidden" th:field="*{client_id}"/>

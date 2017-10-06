@@ -1,6 +1,12 @@
-.container {
+.container{
+   margin-top: 48px;
+}
+.uoa-container {
     max-width: 750px;
-    margin-top: 48px;
+}
+
+.uoa-container-large {
+    max-width: 900px;
 }
 
 .footer {

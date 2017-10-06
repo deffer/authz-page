@@ -1,6 +1,5 @@
 package nz.ac.auckland.auth.contract
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import groovyx.net.http.ContentType
 import groovyx.net.http.EncoderRegistry
 import groovyx.net.http.HTTPBuilder
@@ -92,16 +91,11 @@ class KongContract {
 		return joinUrls(kongAdminUrl, OP_CLIENT_OAUTH2)+"?id=$id"
 	}
 
-	public String listUserTokensQuery(String userId){
-		return joinUrls(kongAdminUrl, OP_LIST_TOKENS)+"?authenticated_userid=$userId&size=400"
-	}
-
-	public String listSpecialConsentTokensQuery(String userFormatted, String clientAppId=null){
-		long expiresIn = 0
+	public String listTokensQuery(String userFormatted, String clientAppId=null){
 		if (clientAppId)
-			return joinUrls(kongAdminUrl, OP_LIST_TOKENS)+"?authenticated_userid=$userFormatted&credential_id=$clientAppId&expires_in=$expiresIn"
+			return joinUrls(kongAdminUrl, OP_LIST_TOKENS)+"?authenticated_userid=$userFormatted&credential_id=$clientAppId&size=400"
 		else
-			return joinUrls(kongAdminUrl, OP_LIST_TOKENS)+"?authenticated_userid=$userFormatted&expires_in=$expiresIn"
+			return joinUrls(kongAdminUrl, OP_LIST_TOKENS)+"?authenticated_userid=$userFormatted&size=400"
 	}
 
 
@@ -230,13 +224,13 @@ class KongContract {
 	}
 
 	public Map getConsentTokens(String userId, String clientAppId=null){
-		return getMap(listSpecialConsentTokensQuery(userId+Token.CONSENT_USER_SUFFIX, clientAppId))
+		return getMap(listTokensQuery(userId+Token.CONSENT_USER_SUFFIX, clientAppId))
 	}
 
 	public List<Token> getTokens4User(String userId){
 		List<Token> result = []
-		Map accessTokens = getMap(listUserTokensQuery(userId))
-		Map consentTokens = getMap(listSpecialConsentTokensQuery(userId+Token.CONSENT_USER_SUFFIX))
+		Map accessTokens = getMap(listTokensQuery(userId))
+		Map consentTokens = getMap(listTokensQuery(userId+Token.CONSENT_USER_SUFFIX))
 		accessTokens?.data?.each {Map tokenData->
 			Token token = JsonHelper.convert(tokenData, Token.class)
 			token.consentToken = Boolean.FALSE

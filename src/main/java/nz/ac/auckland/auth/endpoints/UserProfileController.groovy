@@ -72,27 +72,25 @@ class UserProfileController {
 
 	private void prepareView(String userId, Model model) {
 		List<Token> allTokens =  kong.getTokens4User(userId)
-		// note, tokens are paginated - have 'total' and 'next'
-
+		// note, tokens are paginated - have 'total' and 'next', ignoring it for now
 
 		Map<String, ClientInfo> apps = [:]
 
 		List tokens = []
 		List consents = []
 
-		// here we going to add more fields to the Token object so we can display them
 		allTokens.each { Token kongToken ->
 			def displayToken = JsonHelper.convert(kongToken, HashMap.class)
 			long issued = kongToken.created_at
-			displayToken.issuedStr = new Date(issued).format("yyyy-dd-MM")
+			displayToken.issuedStr = new Date(issued).format("yyyy-MM-dd")
 			displayToken.issuedHint = new Date(issued).format("HH:mm:ss")
-			long expiresIn = kongToken.isConsentToken() ? kongToken.consentExpiresIn : kongToken.expires_in
+			long expiresIn = kongToken.expires_in
 			if (expiresIn == 0l){
 				displayToken.expiresStr = "Never"
 				displayToken.expiresHint = ""
 			}else {
 				long expires = kongToken.created_at + expiresIn * 1000
-				displayToken.expiresStr = new Date(expires).format("yyyy-dd-MM")
+				displayToken.expiresStr = new Date(expires).format("yyyy-MM-dd")
 				displayToken.expiresHint = new Date(expires).format("HH:mm:ss")
 			}
 			String appId = kongToken.credential_id
@@ -113,7 +111,6 @@ class UserProfileController {
 
 		model.addAttribute("tokens", tokens)
 		model.addAttribute("consents", consents)
-		//model.addAttribute("applications", apps)
 	}
 
 	private Map getToken(String tokenId, String userId){
