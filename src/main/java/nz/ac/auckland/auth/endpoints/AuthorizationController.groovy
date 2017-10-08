@@ -292,7 +292,7 @@ public class AuthorizationController {
 			return "uoa-error";
 		} else {
 			String returnCallback = makeCallback(kongResponseObj, authRequest, clientInfo, model,
-					callbackIsDifferent? authRequest.redirect_uri : null)
+					canRedirect.exactMatch? null : authRequest.redirect_uri)
 			return returnCallback
 		}
 	}
