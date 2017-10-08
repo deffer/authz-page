@@ -223,8 +223,12 @@ class KongContract {
 		return map
 	}
 
-	public Map getConsentTokens(String userId, String clientAppId=null){
-		return getMap(listTokensQuery(userId+Token.CONSENT_USER_SUFFIX, clientAppId))
+	public List<Token> getConsentTokens(String userId, String clientAppId=null){
+		Map response = getMap(listTokensQuery(userId+Token.CONSENT_USER_SUFFIX, clientAppId))
+		if (response.data) {
+			response.data?.collect { JsonHelper.convert(it, Token.class) }
+		}else
+			return []
 	}
 
 	public List<Token> getTokens4User(String userId){

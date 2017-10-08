@@ -98,4 +98,16 @@ class Token {
 		String signMessage = "${salt}s${expiresInStr}"
 		return cryptoHelper.sign(signMessage)
 	}
+
+	boolean stillActive(){
+		if (expires_in == 0l)
+			return true
+		long current = System.currentTimeMillis()
+		return (created_at + (expires_in*1000)) >= (current + 300000)
+	}
+
+	boolean validForAllScopes(List<String> scopesRequired){
+		List<String> consentedScopes = scope.trim().replaceAll(",", ' ').split(' ').findAll{!it.trim().isEmpty()} as List<String>
+		return consentedScopes.containsAll(scopesRequired)
+	}
 }

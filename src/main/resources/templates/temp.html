@@ -9,6 +9,7 @@
 <p th:text="'Authenticated user id: ' + ${user_id}" />
 <h3>Form submit:</h3>
 <p th:each="fm: ${map.toProps()}"><span th:text="${fm.key}+' - '+${fm.value}"></span></p>
+<p th:if="${rememberAction}" th:text="'Remember action: '+ ${rememberAction}"></p>
 <h3>Kong request:</h3>
 <p th:text="'Provision key '+ ${provision_key}"></p>
 <p th:text="'Submit url '+ ${submitTo}"></p>

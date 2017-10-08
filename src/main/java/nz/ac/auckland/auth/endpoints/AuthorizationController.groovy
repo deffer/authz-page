@@ -47,6 +47,13 @@ public class AuthorizationController {
 	private String msgScopeNotAllowed = "This scope is not available in this context. This indicates a problem with consumer application."
 
 
+	@Value('${as.log.verbose:false}')
+	private static boolean verboseLogs
+
+	static final long ONE_MONTH = 2592000l // in seconds
+	static final long FOREVER = 0l
+
+
 	private static final Logger logger = LoggerFactory.getLogger(AuthorizationController.class);
 
 	@Autowired
@@ -62,7 +69,7 @@ public class AuthorizationController {
 
 	// http://localhost:8090/identity/oauth2/authorize?client_id=my_clientid&response_type=code&scope=identity-read,identity-write
 	@RequestMapping("/{api_id}/oauth2/authorize")
-	public String authForm(@RequestHeader(value = "REMOTE_USER", defaultValue = "NULL") String userId,
+	public String authForm(@RequestHeader(value = "REMOTE_USER", defaultValue = "user") String userId,
 	                       @RequestHeader(value = "displayName", defaultValue = "NULL") String userName,
 	                       @PathVariable("api_id") String apiId, AuthRequest authRequest, Model model) {
 
@@ -75,13 +82,14 @@ public class AuthorizationController {
 			return "uoa-error"
 		}
 
-		// defined greetings value
+		// define greetings value
 		String displayName = userName != "NULL"? userName :  "Unknown (${authRequest.user_id})"
 		model.addAttribute("name", displayName);
 
 		// pass request input values to the view in hidden fields
 		model.addAttribute("map", authRequest);
 
+		// check if we know this API
 		ApiInfo apiInfo = kong.getApiInfo(apiId)
 		if (apiInfo == null){
 			model.addAttribute("user_id", userId);
@@ -92,44 +100,80 @@ public class AuthorizationController {
 			model.addAttribute("clientError", "unknown_api")
 			return "auth";
 		}
-
 		if (!(apiInfo.provisionKey)){
 			model.addAttribute("clientError", "noauth_api")
 			return "auth";
 		}
 
+		// check if we know this application and consumer
+		ClientInfo clientInfo = kong.getClientInfo(authRequest.client_id)
+		if (!clientInfo){
+			model.addAttribute("clientError", "unknown_client")
+			return "auth"
+		}
+
+		// everything looks fine. we could proceed with rendering the form,
+		//   however we need to make some UoA customizations and checks
 		List<String> validScopes = processScopes(authRequest, apiInfo, model)
 		authRequest.scope = validScopes.join(" ")
 
+		// if its our internal university client application - we trust it
+		//   (and so does the user) as long as the app location is registered and not overridden in request
+		//   if its all good, dont ask for user's consent and proceed with issuing a token
+		if (isOkToAutoGrant(clientInfo, authRequest)){
+			String callbackUri = clientInfo.determineCallback4AutoGrant(authRequest.redirect_uri)
+			Map kongResponse = kong.submitAuthorization(userId, callbackUri,apiInfo, authRequest);
+			return makeCallback(kongResponse, authRequest, clientInfo, model, null) // null - do NOT override callbackUri
+		}
 
-		// find out application and consumer details
-		ClientInfo clientInfo = kong.getClientInfo(authRequest.client_id)
-		if (clientInfo){
-			if (isOkToAutoGrant(clientInfo, authRequest)){
-				// that's our internal university client application.
-				// we trust it (and so does the user) as long as the app location is registered and not overridden in request
-				String callbackUri = clientInfo.determineCallback4AutoGrant(authRequest.redirect_uri)
-				Map kongResponse = kong.submitAuthorization(userId, callbackUri,apiInfo, authRequest);
-				return makeCallback(kongResponse, authRequest, clientInfo, model, null) // null - do NOT override callbackUri
+		// check if request wants to override the callback url and reject if its not allowed
+		def canRedirect = isOkToRedirect(authRequest, clientInfo)
+		if (!canRedirect.ok) {
+			model.addAttribute("clientError", "callback_match")
+		}else if (canRedirect.warning) {
+			// warning means callback is "overridden" (callback is different from registered),
+			//   and its allowed, however
+			//    - user needs to be aware that
+			//    - we dont allow "Remember" options in this case
+			model.addAttribute("clientWarning", canRedirect.warning)
+		}else {
+			// ok, no warnings. check if there is a already a remember me token
+			List<Token> consentTokens = kong.getConsentTokens(userId, clientInfo.id)
+			Token validConsent = consentTokens.find{
+				it.isConsentToken() &&
+				it.validForAllScopes(validScopes) &&
+				it.stillActive()
 			}
 
-			def canRedirect = isOkToRedirect(authRequest, clientInfo)
-			if (!canRedirect.ok)
-				model.addAttribute("clientError", "callback_match")
-			else if (canRedirect.warning)
-				model.addAttribute("clientWarning", canRedirect.warning)
+			// if we have valid consent, don't render the form and proceed with issuing a token
+			if (validConsent != null) {
+				logger.debug("Using previously consented token for user $userId and api ${apiInfo.name} and client ${clientInfo.name}")
 
+				// Kong will only allow registered callbacks. pass null if callback is different from registered
+				String callback4Kong = canRedirect.exactMatch? authRequest.redirect_uri : null
+				if (verboseLogs)
+					logger.debug("Found conset, submitting authorization to Kong: for callback '$callback4Kong' and user $userId and api ${apiInfo.name} and client ${clientInfo.name}")
+				Map kongResponse = kong.submitAuthorization(userId, callback4Kong, apiInfo, authRequest);
 
-			URI uri = new URI(authRequest.redirect_uri)
-			model.addAttribute("appname", clientInfo.name);
-			model.addAttribute("apphost", (uri.getScheme() ? uri.getScheme() + "://" : "") + uri.getHost());
-			model.addAttribute("appurl", uri.toString());
-			model.addAttribute("apiid", apiId);
-			model.addAttribute("debug", development);
-			model.addAttribute("rememberme", !hideRememberMe); // depends on flow type and presence of warnings
-		}else{
-			model.addAttribute("clientError", "unknown_client")
+				// If we used Kong's registered callback on previous step, we need to override the response
+				// null - do NOT override the final callback (use Kong's response as is
+				String callbackReal = canRedirect.exactMatch? null : authRequest.redirect_uri
+				if (verboseLogs)
+					logger.debug("Making a callback to ${callbackReal?:'default'} for user $userId and api ${apiInfo.name} and client ${clientInfo.name}")
+				return makeCallback(kongResponse, authRequest, clientInfo, model, callbackReal)
+			}else if (consentTokens.size()>0){
+				logger.debug("No valid consent token found in the list of ${consentTokens.size()}, for user $userId and api ${apiInfo.name} and client ${clientInfo.name}")
+			}
 		}
+
+
+		URI uri = new URI(authRequest.redirect_uri)
+		model.addAttribute("appname", clientInfo.name);
+		model.addAttribute("apphost", (uri.getScheme() ? uri.getScheme() + "://" : "") + uri.getHost());
+		model.addAttribute("appurl", uri.toString());
+		model.addAttribute("apiid", apiId);
+		model.addAttribute("debug", development);
+		model.addAttribute("rememberme", !hideRememberMe); // depends on flow type and presence of warnings
 
 		return "auth";
 	}
@@ -138,7 +182,7 @@ public class AuthorizationController {
 	boolean sanitizeRequestParameters(AuthRequest authRequest, String userId, Model model) {
 		// do we need to sanitize redirect_uri? its always passed through URI constructor which should do it for us
 		if (!validateId(authRequest.client_id)){
-			logger.error("Invalid client_id "+authRequest.client_id)
+			logger.error("Invalid client_id ${authRequest.client_id}, affected user - $userId")
 			model.addAttribute("text", "Invalid client_id")
 			return false
 		}
@@ -149,18 +193,17 @@ public class AuthorizationController {
 			authRequest.response_type = AUTHORIZE_CODE_FLOW
 		}
 
-		if ((!userId) || userId=="NULL"){
+		if ((!userId) || userId=="user"){
 			if (!development){
-				logger.error("Unexpected error (SSO fail)")
+				logger.error("SEVERE: Unexpected error (SSO fail)")
 				model.addAttribute("text", "Unexpected error (SSO fail)")
 				return false
 			}else {
-				logger.error("No user found in REMOTE_USER header, fallback to 'user' (application is in debug mode)")
-				authRequest.user_id = "user";
-				return true
+				logger.error("No user found in REMOTE_USER header, fallback to '$userId' (application is in dev mode)")
 			}
-		}else
-			authRequest.user_id = userId
+		}
+
+		authRequest.user_id = userId
 		return true
 	}
 
@@ -173,16 +216,16 @@ public class AuthorizationController {
 	// https://spring.io/guides/gs/handling-form-submission/
 	@RequestMapping(value = "/{api_id}/auth/submit", method = RequestMethod.POST)
 	// always use POST
-	public String authSubmit(@RequestHeader(value = "REMOTE_USER", defaultValue = "NULL") String userId,
+	public String authSubmit(@RequestHeader(value = "REMOTE_USER", defaultValue = "user") String userId,
 	                         @PathVariable("api_id") String apiId, AuthRequest authRequest, Model model) {
 		// temporarily using "actionXXX" param to route requests to allow,deny or debug
 		if (authRequest.actionDeny)
 			return authDeny(authRequest, model);
 
 		String forUser = (authRequest.user_id && development)?authRequest.user_id : userId
-		if (forUser == "NULL" && !development){
+		if (forUser == "user" && !development){
 			model.addAttribute("text", "Unexpected error (SSO fail)")
-			logger.error("ALERT: Unexpected error (SSO fail) - REMOTE_USER is $forUser")
+			logger.error("SEVERE: Unexpected error (SSO fail) - REMOTE_USER is $forUser")
 			return "uoa-error"
 		}
 
@@ -213,22 +256,19 @@ public class AuthorizationController {
 			model.addAttribute("clientWarning", canRedirect.warning)
 		}
 
-		// if redirectUri is overridden (and it is allowed), remember that
-		boolean callbackIsDifferent =  (authRequest.redirect_uri && !clientInfo.redirectUris.contains(authRequest.redirect_uri))
-		String redirectUriKongCompliant = callbackIsDifferent? null: authRequest.redirect_uri
 
-		// now we need to inform Kong that user authenticatedUserId grants authorization to application cliend_id
-		Map kongResponseObj = kong.submitAuthorization(forUser, redirectUriKongCompliant, apiInfo, authRequest);
+		// Kong will only allow registered callbacks. pass null if callback is different from registered
+		String callback4Kong = canRedirect.exactMatch? authRequest.redirect_uri : null
+		Map kongResponseObj = kong.submitAuthorization(forUser, callback4Kong, apiInfo, authRequest);
 
 		Map rememberMeResponse = null
 
 		if (kongResponseObj.redirect_uri && !canRedirect.warning && !hideRememberMe
 				&& authRequest.remember && authRequest.remember!="none"){
-			// todo remove all consents which are shorter than this one
-
 			// create new consent token
 			String scopes = authRequest.extractedScopes().join(" ")?:"default"
-			Token consentToken = Token.generateConsentToken(2592000l, forUser, scopes, apiInfo.id, clientInfo.id)
+			Token consentToken = Token.generateConsentToken(getConsentDuration(authRequest.remember),
+					forUser, scopes, apiInfo.id, clientInfo.id)
 			rememberMeResponse = kong.saveToken(consentToken)
 		}
 
@@ -239,7 +279,7 @@ public class AuthorizationController {
 			model.addAttribute("submitTo", kong.authorizeUrl(apiInfo.selectRequestPath()));
 			model.addAttribute("kongResponse", kongResponseObj.toString());
 			if (rememberMeResponse)
-				model.addAttribute("RememberMe was saved as "+ JsonHelper.serialize(rememberMeResponse))
+				model.addAttribute("rememberAction", "New consent token: "+ JsonHelper.serialize(rememberMeResponse))
 
 			return "temp";
 		} else if(!(kongResponseObj.redirect_uri)) {
@@ -255,6 +295,15 @@ public class AuthorizationController {
 					callbackIsDifferent? authRequest.redirect_uri : null)
 			return returnCallback
 		}
+	}
+
+	private static long getConsentDuration(String inputValue){
+		long result = 60*60*24 // 1 day
+		switch (inputValue){
+			case "one-month" : ONE_MONTH; break;
+			case "until-revoked": FOREVER
+		}
+		return result
 	}
 
 	private boolean isOkToAutoGrant(ClientInfo clientInfo, AuthRequest authRequest){
@@ -277,15 +326,14 @@ public class AuthorizationController {
 	 *   - first, client MUST be in the Kong group system-dynamic-client
 	 *   - overridden callback MUST be on the same domain as registered one OR localhost
 	 *
-	 * @param authRequest what was passed in teh request. contains new redirect_uri (if passed)
+	 * @param authRequest what was passed in the request. contains new redirect_uri (if passed)
 	 * @param clientInfo whats registered for this client in Kong
-	 * @param model can be empty, as in the case of calling this method before issuing a final redirect.
 	 * @return
 	 */
 	private def isOkToRedirect(AuthRequest authRequest, ClientInfo clientInfo){
 		if ( (!authRequest.redirect_uri) || clientInfo.redirectUris.contains(authRequest.redirect_uri)) {
 			authRequest.redirect_uri = authRequest.redirect_uri?:clientInfo.redirectUris[0]
-			return [ok:true]
+			return [ok:true, exactMatch: true]
 		} else {
 
 			if (clientInfo.groups.contains(KongContract.GROUP_AUTH_GRANTED)) {
@@ -356,7 +404,7 @@ public class AuthorizationController {
 		String kongResponse = kongResponseObject.redirect_uri
 
 		URI uri = new URI(kongResponse)
-		// if it has a fragment (this is Kong 0.9+, yay less work to do) or its for code flow...
+		// if it already has a fragment (this is Kong 0.9+, yay less work to do) or its for code flow...
 		if ( (uri.fragment || authRequest.response_type.equalsIgnoreCase(AUTHORIZE_CODE_FLOW)) && !overrideCallback){
 			return "redirect:" + kongResponse
 		}
