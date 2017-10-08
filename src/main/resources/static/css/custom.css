@@ -141,3 +141,9 @@ h2.media-heading {
 .scopes-header{
     color: #00467f;
 }
+
+.title-with-hint span {
+    font-size: 30px;
+    margin-top: 20px;
+    margin-bottom: 10px;
+}

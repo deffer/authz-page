@@ -300,8 +300,8 @@ public class AuthorizationController {
 	private static long getConsentDuration(String inputValue){
 		long result = 60*60*24 // 1 day
 		switch (inputValue){
-			case "one-month" : ONE_MONTH; break;
-			case "until-revoked": FOREVER
+			case "one-month" : result = ONE_MONTH; break;
+			case "until-revoked": result = FOREVER
 		}
 		return result
 	}
