@@ -25,7 +25,7 @@ class KongContract {
 	public static final String OP_CLIENT_OAUTH2 = "/oauth2" // /oauth2?client_id=
 
 	// these are endpoints on public interface (8000)
-	static String OP_AUTHORIZE = '/oauth2/authorize'
+	public static String OP_AUTHORIZE = '/oauth2/authorize'
 
 
 	// static resources. accessed as normal APIs
@@ -103,6 +103,13 @@ class KongContract {
 		return joinUrls(kongAdminUrl, OP_LIST_TOKENS, id)
 	}
 
+	public String findDeveloperConsumerQuery(String upi){
+		return joinUrls(kongAdminUrl, "/consumers?username=developer-${upi}&custom_id=$upi")
+	}
+
+	public String findDeveloperApplicationsQuery(String consumerId){
+		return joinUrls(kongAdminUrl, "/consumers/$consumerId/oauth2")
+	}
 
 	public String listConsumerAclsQuery(String consumerId){
 		return joinUrls(kongAdminUrl, "/consumers/$consumerId/acls")
@@ -316,10 +323,35 @@ class KongContract {
 
 		if (fromMap && ClientInfo.loadFromClientResponse(fromMap, result)){
 			fromMap = getMap(listConsumerAclsQuery(result.consumerId));
-			ClientInfo.loadFromConsumerResponse(fromMap, result)
+			ClientInfo.loadFromConsumerAclResponse(fromMap, result)
 			return result
 		}else
 			return null
+	}
+
+	public String getDeveloperConsumerId(String upi){
+		Map map = getMap(findDeveloperConsumerQuery(upi))
+		if ((!map?.data) || map?.data?.size()==0){
+			return null
+		}else if (map.data.size()>1){
+			logger.warn("Multiple developer record for identity '$upi'")
+		}
+		return map.data[0].id
+	}
+	public List<ClientInfo> getDeveloperApplications(String consumerId){
+		List<ClientInfo> result = []
+		if (!consumerId)
+			return result
+
+		Map aclMap = getMap(listConsumerAclsQuery(consumerId));
+		Map clientAppsMap = getMap(findDeveloperApplicationsQuery(consumerId))
+		clientAppsMap.data?.each{Map clientInfoMap ->
+			ClientInfo clientInfo = new ClientInfo()
+			ClientInfo.loadFromClientResponse(clientInfoMap, clientInfo)
+			ClientInfo.loadFromConsumerAclResponse(aclMap, clientInfo)
+			result.add(clientInfo)
+		}
+		return result
 	}
 
 

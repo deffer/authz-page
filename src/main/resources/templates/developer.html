@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/head :: head"></head>
+
+<body>
+<div th:replace="fragments/header :: header (name=${name})"></div>
+
+<div class="container uoa-container-large">
+
+	<div class="panel panel-primary">
+		<!-- Default panel contents -->
+		<div class="panel-heading">Registered Applications</div>
+		<div class="panel-body">
+			<p>The table below shows your registered OAuth2 applications. Application, also known
+			as OAuth2 client, need to be registered to allow connecting to University OAuth2 APIs.
+			You must have a valid University account to be able to register applications.</p>
+		</div>
+
+		<!-- Table -->
+		<table class="table" th:if="${!apps.isEmpty()}">
+			<tr><th>Application Name</th><th>Client id</th><th>Callback URL(s)</th><th>Registered on</th><th>Options</th></tr>
+			<tr th:each="app: ${apps}">
+				<td><span th:text="${app.name}"></span></td>
+				<td><span th:text="${app.clientId}"></span></td>
+				<td><span th:text="${app.callbacks}"></span></td>
+				<td><span th:text="${app.issuedStr}"></span></td>
+				<td>
+					<a class="btn btn-xs" href="#" th:onclick="'deleteToken(\''+${app.id}+'\');'">
+						<span class="glyphicon glyphicon-trash disable-links"></span> Remove
+					</a>
+				</td>
+			</tr>
+		</table>
+
+		<div th:if="${apps.isEmpty()}">
+			<div class="alert alert-info" role="alert" th:if="${canRegister}">
+				<p>You have no registered application yet. Press Add New to register new application.</p>
+			</div>
+		</div>
+
+		<div class="alert alert-danger" role="alert" th:unless="${canRegister}">
+			<p>You cannot register applications until your identity is resolved. If you created an account today, you might
+				need to wait until tomorrow. Please note, your identity will only be resolved if you provided sufficient
+				information during registration, such as your email and date of birth.</p>
+		</div>
+	</div>
+
+	<div th:if="${canRegister}">
+		<a class="btn btn-success" href="/developer/app" name="add">Add new</a>
+	</div>
+
+
+
+</div>
+<!-- /container -->
+<div th:replace="fragments/footer :: footer"></div>
+</body>
+</html>

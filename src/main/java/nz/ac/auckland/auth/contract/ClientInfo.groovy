@@ -11,6 +11,7 @@ public class ClientInfo {
 	List<String> redirectUris // a callback url where code/token can be returned to
 	String consumerId  // internal identifier of a consumer who owns application and credentials
 	Set<String> groups // acl info (groups) of the consumer who owns application and credentials
+	Long created_at
 
 
 	// CLIENT
@@ -63,7 +64,7 @@ public class ClientInfo {
 	//   "id":"741c4bb1-1cc4-428f-8f77-c55676c71cb8"}
 	// ],"total":1}
 
-	public static void loadFromConsumerResponse(Map consumerResponse, ClientInfo self){
+	public static void loadFromConsumerAclResponse(Map consumerResponse, ClientInfo self){
 		self.groups = []
 		if (consumerResponse != null && consumerResponse["data"] != null)
 			consumerResponse["data"].each{Map it-> if (it.group != null) self.groups.add((String)it.group) }
@@ -81,7 +82,7 @@ public class ClientInfo {
 	}
 
 	public String displayRedirects(){
-		return redirectUris.join(",")
+		return redirectUris.join(" ")
 	}
 
 	/**
