@@ -1,5 +1,22 @@
+@font-face {
+    font-family: "NationalBold";
+    src: url(https://cdn.auckland.ac.nz/designs/uoa-digital/clientlibs/css/fonts/NationalWeb-Bold.woff2) format("truetype");
+}
+
+@font-face {
+    font-family: "NationalBook";
+    src: url(https://cdn.auckland.ac.nz/designs/uoa-digital/clientlibs/css/fonts/NationalWeb-Book.woff2) format("truetype");
+}
+
+body {
+    background: #fafafa;
+    font-size: 16px;
+}
 .container{
-   margin-top: 48px;
+    margin-top: 48px;
+    font-family: 'NationalBook', sans-serif;
+    line-height: 1.5;
+    color: #4a4c4c;
 }
 .uoa-container {
     max-width: 750px;
@@ -9,6 +26,42 @@
     max-width: 900px;
 }
 
+.auth-panel {
+    border: 1px solid #c9d3dd;
+    font-size: 1.2em;
+}
+
+.auth-panel h2{
+    font-family: 'NationalBold', sans-serif;
+    margin-bottom: 1.5em;
+    color: #00467f;
+    font-size: 1.6em;
+}
+.auth-panel .form-control{
+    font-size: 0.8em;
+}
+
+/* yeah, dont know why its misaligned... */
+.auth-panel input[type=checkbox] {
+    margin-top: 0.5em;
+}
+/* styling other panels */
+.panel .panel-heading {
+    font-size: 1.2em;
+}
+.panel .panel-heading .panel-title{
+    font-size: inherit;
+}
+
+.panel-heading-collapsible a:after {
+    font-family:'Glyphicons Halflings';
+    content:"\e114";
+    float: right;
+    color: grey;
+}
+.panel-heading-collapsible a.collapsed:after {
+    content:"\e080";
+}
 .footer {
     margin: 24px auto;
     padding-top: 10px;
@@ -37,10 +90,11 @@ label {
 
 .texthighlight {
     padding: 2px 4px;
-    font-size: 90%;
+    font-size: 1.1em;
     color: #c7254e;
-    background-color: #f9f2f4;
-    border-radius: 4px;
+    font-weight: bold;
+    /*background-color: #f9f2f4;
+    border-radius: 4px;*/
 }
 
 .urlhighlight {
@@ -51,7 +105,8 @@ label {
 }
 
 .jumbotron p {
-    font-size: 18px;
+    font-size: 1.1em;
+    text-align:justify
 }
 
 h2.media-heading {
@@ -65,37 +120,41 @@ h2.media-heading {
     background-image: url(https://iam.auckland.ac.nz/static/82Kppr4O6Jp7ncyFnC6PZfOINFnty6JFXTr1CNIincN.png);
 }
 
-.swagger-ui-wrap {
+.uoa-header-content {
     margin-left: auto;
     margin-right: auto;
     max-width: 906px;
 }
 
-#api_selector {
+#uoa-header-right-column {
     float: right;
 }
 
-#api_selector > div.input {
+#uoa-header-right-column > div.input {
     margin-top: 35px;
     float: left;
 }
 
-#api_selector > div.greeting {
+#uoa-header-right-column > div.greeting {
     color: #fff;
 }
 
-#api_selector > div.control {
+#uoa-header-right-column > div.control {
     margin-left: 20px;
 }
 
-#api_selector > div.button {
+#uoa-header-right-column > div.button {
     width: 63px;
 }
 
+/* size of the error images */
 .media-left > i.fa {
-    font-size: 15em;
+    font-size: 8em;
 }
 
+.btn{
+    font-size: 1em;
+}
 .btn-warning {
     color: #000;
     background: #ffffff;
@@ -115,7 +174,7 @@ h2.media-heading {
     border-color:  #000;
 }
 
-.btn-success {
+.btn-allow {
     color: #fff;
     background: #00467f;
     margin: 2px 13px;
@@ -128,7 +187,7 @@ h2.media-heading {
     -moz-border-radius: 4px;
 }
 
-.btn-success:focus, .btn-success:hover {
+.btn-allow:focus, .btn-allow:hover {
     background: #009ac7;
     color: #ffffff;
     border-color:  #000;
@@ -140,6 +199,7 @@ h2.media-heading {
 }
 .scopes-header{
     color: #00467f;
+    font-size: 1.3em;
 }
 
 .title-with-hint span {

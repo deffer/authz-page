@@ -7,28 +7,29 @@
 	<div class="container uoa-container">
 		<div class="jumbotron">
 			<h3>What is OAuth2</h3>
-			OAuth 2 is an authorization framework which is commonly used by <em>applications</em>
+			<p>OAuth 2 is an authorization framework which is commonly used by <em>applications</em>
 			to obtain limited access to user accounts on other websites
 			without having to share their password.
-			<p></p>
-			In the University of Auckland, OAuth2 is used to protect University APIs
-			and enable user-controlled access to their information
+			</p>
+			<p>In the University of Auckland, OAuth2 is used to protect the University APIs
+			and to enable user-controlled access to their information
 			such as enrollments, employment and identity attributes.
-			To connect to University APIs, application <em>developer</em> needs to register
+			To connect to the University APIs, application <em>developer</em> needs to register
 			his or her application with the University first. Once its done, application
 			can connect to APIs by asking the <em>user</em> to authenticate and authorize the access.
 			The user is presented with a consent screen describing the type of access and
 			which application is requesting it. User can chose to Deny or Allow access.
 			Once access is approved, application can call API and receive information about the current user.
-			<p></p>
+			</p>
 			<img src="static/images/oauth2-uni-simple.png"/>
-			<p></p>
+			<p>
 			If you are a <strong>developer</strong> and would like to register your OAuth2 application and provision
-			client credentials, please go to <a href="/developer" target="_blank">Developer section</a>.
-			<p></p>
+			client credentials, please go to the <a href="/developer" target="_blank">Developer section</a>.
+			</p><p>
 			If you are a <strong>student</strong> using the application, make sure to check the url of the application website
-			matches the redirect url. Be aware that once you authorize (Allow) application, it will have access to your data
+			matches the redirect url. Be aware that once you authorize application, it will have access to your data
 			even when you are offline. You can view connected applications and active tokens <a href="/self" target="_blank">here</a>
+			</p>
 		</div>
 		<div th:if="${debug}">
 			<h3>Quick links for test</h3>

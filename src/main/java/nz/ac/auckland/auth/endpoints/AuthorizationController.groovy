@@ -61,7 +61,6 @@ public class AuthorizationController {
 
 	@RequestMapping(value = "/")
 	public String index(@RequestHeader(value = "displayName", defaultValue = "Unknown") String userName, Model model) {
-		System.out.println("Rendering index.html");
 		model.addAttribute("name", userName)
 		model.addAttribute("debug", development)
 		return "index";
@@ -130,6 +129,7 @@ public class AuthorizationController {
 		def canRedirect = isOkToRedirect(authRequest, clientInfo)
 		if (!canRedirect.ok) {
 			model.addAttribute("clientError", "callback_match")
+			model.addAttribute("clientWarning", canRedirect.warning) // good url example
 		}else if (canRedirect.warning) {
 			// warning means callback is "overridden" (callback is different from registered),
 			//   and its allowed, however
@@ -264,7 +264,7 @@ public class AuthorizationController {
 		Map rememberMeResponse = null
 
 		if (kongResponseObj.redirect_uri && !canRedirect.warning && !hideRememberMe
-				&& authRequest.remember && authRequest.remember!="none"){
+				&& authRequest.remember && authRequest.remember!=AuthRequest.REMEMBER_NOT){
 			// create new consent token
 			String scopes = authRequest.extractedScopes().join(" ")?:"default"
 			Token consentToken = Token.generateConsentToken(getConsentDuration(authRequest.remember),
@@ -300,8 +300,8 @@ public class AuthorizationController {
 	private static long getConsentDuration(String inputValue){
 		long result = 60*60*24 // 1 day
 		switch (inputValue){
-			case "one-month" : result = ONE_MONTH; break;
-			case "until-revoked": result = FOREVER
+			case AuthRequest.REMEMBER_MONTH : result = ONE_MONTH; break;
+			case AuthRequest.REMEMBER_FOREVER: result = FOREVER
 		}
 		return result
 	}

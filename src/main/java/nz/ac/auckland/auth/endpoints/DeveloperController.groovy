@@ -10,6 +10,7 @@ import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.RequestHeader
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestMethod
 
 @Controller
 // do NOT enable CORS on any of these method
@@ -41,6 +42,23 @@ class DeveloperController {
 		model.addAttribute("canRegister", (userId ==~ /[a-zA-Z]{1,4}\d{3}$/))
 		return "developer"
 	}
+
+	@RequestMapping(value="/developer/add", method = RequestMethod.GET)
+	public String addAppForm(@RequestHeader(value = "REMOTE_USER", defaultValue = "user") String userId,
+	                       @RequestHeader(value = "displayName", defaultValue = "NULL") String userName, Model model) {
+
+		String displayName = userName != "NULL"? userName :  "Unknown (${userId})"
+		model.addAttribute("name", displayName);
+
+		if ((!userId || userId == "NULL") && development)
+			userId = "user"
+
+
+		prepareView(userId, model)
+		model.addAttribute("canRegister", (userId ==~ /[a-zA-Z]{1,4}\d{3}$/))
+		return "register_app"
+	}
+
 
 	private void prepareView(String userId, Model model) {
 		String consumerId = kong.getDeveloperConsumerId(userId)

@@ -10,7 +10,7 @@ public class AuthRequest {
 
 	public static final String REMEMBER_NOT = "remember-not"
 	public static final String REMEMBER_FOREVER = "remember-forever"
-	public static final String REMEMBER_DAY = "remember-day"
+	public static final String REMEMBER_MONTH = "remember-month"
 
 	// required by OAuth2 spec and set by client
 	String client_id;
@@ -24,7 +24,7 @@ public class AuthRequest {
 	String use_fragment;
 
 	// user choice
-	String remember = REMEMBER_FOREVER;
+	String remember = REMEMBER_NOT;
 
 	// temporarily using these flags as indicators of what button was pressed
 	String actionAllow = null;

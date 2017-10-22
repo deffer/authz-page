@@ -3,6 +3,9 @@ function deleteToken(token){
     var result = window.confirm('Are you sure?');
     console.log("User says "+result+" for "+token);
 
+    if (!result)
+        return;
+
     // ugly piece of code below
     $.ajax({
         url: '/self/token/'+token,

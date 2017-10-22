@@ -14,64 +14,83 @@
 			<input type="hidden" th:field="*{scope}"/>
 			<input type="hidden" th:field="*{use_fragment}"/>
 			<!--div class="jumbotron" th:switch="${clientError}"-->
-			<div class="panel panel-primary" th:switch="${clientError}"><div class="panel-body">
+			<div class="panel auth-panel" th:switch="${clientError}"><div class="panel-body">
 				<div th:case="${null}" id="div_ask_user">
-					<h2>Authorize application</h2>
-					<p>
-						<span class="texthighlight" th:text="${appname}"></span>
-						would like to have authorization to access your data or call services on your behalf.
-						If you approve, authorization code will be sent to <span class="urlhighlight" th:text="${apphost}" th:title="${appurl}"></span>
-						This code can be used to access information about you or other data as indicated by requested scopes below.
-					</p>
-
-					<div class="alert alert-warning" role="alert" th:if="${! #strings.isEmpty(clientWarning)}" id="div_warn_callback_override">
-						This application was registered with a different callback <span class="urlhighlight" th:text="${clientWarning}"></span>.
-						Do not accept his request if you don't trust application which sent you here.
+					<div class="row">
+						<div class="col-md-offset-1 col-md-10"><h2>Authorize application</h2></div>
 					</div>
 
-					<div th:if="${rememberme==true and #strings.isEmpty(clientWarning)}">
+					<div class="row">
+						<div class="col-md-offset-1 col-md-10 col-xs-12 col-xs-offset-0">
+							<span class="texthighlight" th:text="${appname}"></span>
+							wants to access your profile. If you approve, authorization code will be sent to <span class="urlhighlight" th:text="${apphost}" th:title="${appurl}"></span>
+							This code can be used to access information about you.
+						</div>
+					</div>
+					<div class="row">
+						<div class="alert alert-warning" role="alert" th:if="${! #strings.isEmpty(clientWarning)}" id="div_warn_callback_override">
+							This application was registered with a different callback <span class="urlhighlight" th:text="${clientWarning}"></span>.
+							Do not accept his request if you don't trust application which sent you here.
+						</div>
+					</div>
+
+					<div th:if="${rememberme==true and #strings.isEmpty(clientWarning)}" >
 						<hr/>
-						<div class="row">
-						<div class="col-xs-offset-1 col-xs-8">
-							<p class="margin-bottom-s">Remember this decision:</p>
-							<div>
-								<label for="remember-forever">
-									<input type="radio" name="remember" id="remember-forever" value="until-revoked"/>
-									remember this decision until I revoke it
-									<i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
-									   title="You can revoke this access at any time from your Application pages"></i>
-								</label>
-							</div>
-							<div>
-								<label for="remember-day">
-									<input type="radio" name="remember" id="remember-day" value="one-month"/>
-									remember this decision for one month
-									<i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
-									   title="The app will be able to use this access for 1 month only. You will be prompted again if app needs access after this period."></i>
-								</label>
-							</div>
-							<div>
-								<label for="remember-not">
-									<input type="radio" name="remember" id="remember-not" value="none" checked="checked"/>
-									prompt me again next time
-									<i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
-									   title="You will be prompted again if app needs access."></i>
-								</label>
-							</div>
-							<div style="margin-bottom: 15px;">
+						<div th:if="${map.response_type=='token'}" class="row">
+						<div class="col-md-offset-1 col-xs-offset-0 col-xs-6">
+							<label for="remember">Remember my decision</label>
+								<!--p class="margin-bottom-s">Remember my decision:</p-->
+							<select class="form-control" name="remember" id="remember">
+								<option id="remember-not" value="remember-not"
+									title="You will be prompted again if app needs access after the code has expired">
+									No, ask me again next time
+								</option>
+								<option id="remember-month" value="remember-month"
+									title="The app will be able to use this access for 1 month only. You will be prompted again if app needs access after this period.">
+									For one month
+								</option>
+								<option id="remember-forever" value="remember-forever"
+									title="You can revoke this access at any time from your Application pages">
+									Until I revoke it
+								</option>
+							</select>
+							<div style="font-size: 70%;">
 								<a href="/self" target="_blank">View my tokens and applications</a>
 							</div>
 						</div>
 						</div>
+
+						<div th:if="${map.response_type=='code'}" class="row">
+							<div class="col-md-offset-1 col-xs-offset-0 col-xs-6">
+								<div class="checkbox">
+									<label>
+										<input type="checkbox" name="remember" value="remember-forever"/>
+										Dont ask again
+										<i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
+										   title="You can revoke this access at any time from your Application pages"></i>
+									</label>
+								</div>
+								<div style="font-size: 90%;">
+									<a href="/self" target="_blank">View my tokens and applications</a>
+								</div>
+							</div>
+
+						</div>
+
 						<hr/>
 					</div>
 
-
-					<div class="flex-space-between">
-						<button type="submit" class="btn btn-warning" value="Deny" name="actionDeny">Deny</button>
-						<button type="submit" class="btn btn-success" value="Allow" name="actionAllow">Allow</button>
+					<div class="row">
+						<div class="col-md-offset-1 col-md-6 col-xs-12 col-xs-offset-0">
+							<button type="submit" class="btn btn-allow" value="Allow" name="actionAllow">Authorize application</button>
+						</div>
+						<div class="col-md-3 col-xs-12">
+							<button type="submit" class="btn btn-warning" value="Deny" name="actionDeny">Deny</button>
+						</div>
 					</div>
 				</div>
+
+
 				<div th:case="noauth_api" id="div_api_noauth">
 					<div class="media-left">
 						<i class="fa fa-hand-paper-o" aria-hidden="true"></i>
@@ -103,19 +122,24 @@
 				</div>
 				<div th:case="callback_match" id="div_error_callback_nomatch">
 					<h2>Authorize application</h2>
-					<p>We couldn't verify identity of the calling application - mismatched callback url. We've blocked this request to keep you safe.
+					<p>We couldn't verify the identity of the calling application - mismatched callback url. We've blocked this request to keep you safe.
+					You can report this error to the application which sent you here.
 					</p>
 					<div class="alert alert-danger" role="alert">
 						Application <span class="texthighlight" th:text="${appname}"></span>
 						is registered as <span class="urlhighlight" th:text="${clientWarning}"></span>
-						while current request wants to take you to <span class="urlhighlight" th:text="${appurl}"></span>
+						while current request wants to send the access code to <span class="urlhighlight" th:text="${appurl}"></span>
 					</div>
+					<div class="row">
+						<a href="https://auckland.ac.nz" class="btn btn-allow">Home</a>
+					</div>
+
 				</div>
-			</div></div>
+			</div></div> <!-- end of panel -->
 
 			<div class="row"  th:if="${scopes != null } and not ${scopes.size()==0}">
 				<div class="col-sm-12" style="margin-top: 40px;">
-					<h4 class="scopes-header">Requested scopes and their description</h4>
+					<h4 class="scopes-header">Requested access</h4>
 				</div>
 			</div>
 			<div class="row">
@@ -128,8 +152,14 @@
 			</div>
 
 			<div class="panel panel-danger" th:if="${debug}">
-				<div class="panel-heading">Debug services</div>
-				<div class="panel-body">
+				<div class="panel-heading panel-heading-collapsible">
+					<div class="panel-title">
+						<a role="button" data-toggle="collapse" href="#collapseDebugPanel" aria-expanded="false" class="collapsed">
+							Debug services
+						</a>
+					</div>
+				</div>
+				<div class="panel-body collapse" id="collapseDebugPanel">
 
 					<div class="panel">
 						<div class="panel-body">

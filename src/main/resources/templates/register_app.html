@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/head :: head"></head>
+
+<body>
+<div th:replace="fragments/header :: header (name=${name})"></div>
+
+<div class="container uoa-container-large">
+
+	<div class="alert alert-danger" role="alert">
+		<p>
+			This service is ncurrently ot available
+		</p>
+	</div>
+
+</div>
+<!-- /container -->
+<div th:replace="fragments/footer :: footer"></div>
+</body>
+</html>
