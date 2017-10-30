@@ -24,9 +24,8 @@ import org.springframework.web.bind.annotation.RequestMethod
 public class AuthorizationController {
 
 	// options for response_type when calling oauth/authorize endpoint.
-	// WARNING: these values are also referenced in the property file
-	public static final String AUTHORIZE_CODE_FLOW = "code"
-	public static final String AUTHORIZE_IMPLICIT_FLOW = "token"
+	public static final String AUTHORIZE_CODE_FLOW = KongContract.AUTHORIZE_CODE_FLOW
+	public static final String AUTHORIZE_IMPLICIT_FLOW = KongContract.AUTHORIZE_IMPLICIT_FLOW
 
 	@Value('${as.development}')
 	private boolean development = false
@@ -50,8 +49,9 @@ public class AuthorizationController {
 	@Value('${as.log.verbose:false}')
 	private static boolean verboseLogs
 
-	static final long ONE_MONTH = 2592000l // in seconds
-	static final long FOREVER = 0l
+	static final long ONE_MONTH = 2592000L // in seconds
+	static final long TWO_WEEKS = 1296000L // in seconds
+	static final long FOREVER = 0L
 
 
 	private static final Logger logger = LoggerFactory.getLogger(AuthorizationController.class);
@@ -138,7 +138,7 @@ public class AuthorizationController {
 			model.addAttribute("clientWarning", canRedirect.warning)
 		}else {
 			// ok, no warnings. check if there is a already a remember me token
-			List<Token> consentTokens = kong.getConsentTokens(userId, clientInfo.id)
+			List<Token> consentTokens = kong.getConsentTokens(userId, authRequest.response_type, clientInfo.id)
 			Token validConsent = consentTokens.find{
 				it.isConsentToken() &&
 				it.validForAllScopes(validScopes) &&
@@ -268,7 +268,7 @@ public class AuthorizationController {
 			// create new consent token
 			String scopes = authRequest.extractedScopes().join(" ")?:"default"
 			Token consentToken = Token.generateConsentToken(getConsentDuration(authRequest.remember),
-					forUser, scopes, apiInfo.id, clientInfo.id)
+					forUser, authRequest.response_type, scopes, apiInfo.id, clientInfo.id)
 			rememberMeResponse = kong.saveToken(consentToken)
 		}
 
@@ -301,6 +301,7 @@ public class AuthorizationController {
 		long result = 60*60*24 // 1 day
 		switch (inputValue){
 			case AuthRequest.REMEMBER_MONTH : result = ONE_MONTH; break;
+			case AuthRequest.REMEMBER_2WEEKS : result = TWO_WEEKS; break;
 			case AuthRequest.REMEMBER_FOREVER: result = FOREVER
 		}
 		return result

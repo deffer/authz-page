@@ -20,7 +20,7 @@ class Token {
 	String authenticated_userid
 	Long created_at // 1506636019000
 	String credential_id
-	Long expires_in // 7200, or 2592000, or 0 for never
+	Long expires_in // 7200, or 2592000, or 0 for never, or 1010 for custom refresh_tokens which never expire
 	String id
 	String scope // "identity-read identity-write default"
 	String token_type //"bearer"
@@ -31,8 +31,8 @@ class Token {
 	@JsonIgnore
 	CryptoHelper cryptoHelper
 
-	static final String CONSENT_USER_SUFFIX="_consent"
-	static final String CONSENT_NO_EXPIRE_MS="0000"
+	static final String CONSENT_USER_SUFFIX="consent"
+	static final String CONSENT_NO_EXPIRE_MS="0000" // for signature generation
 	static final String TOKEN_TYPE="bearer"
 
 	static def generator = { String alphabet, int n ->
@@ -41,7 +41,11 @@ class Token {
 		}
 	}
 
-	public static Token generateConsentToken(Long consentExpiresInS, String userId,
+	public static String generateConsentTokenString(String userId, String flow){
+		return "${userId}_${CONSENT_USER_SUFFIX}_$flow"
+	}
+
+	public static Token generateConsentToken(Long consentExpiresInS, String userId, String flow,
 	                                         String scope, String apiId, String credentialsId){
 		//long currentTime = System.currentTimeMillis()
 
@@ -50,7 +54,7 @@ class Token {
 		Token result = new Token(
 				//created_at: currentTime, // doesn't work as expected, kong will round it up
 				expires_in: consentExpiresInS,
-				authenticated_userid: userId+CONSENT_USER_SUFFIX,
+				authenticated_userid: generateConsentTokenString(userId, flow),
 				api_id: apiId, credential_id: credentialsId,
 				scope: scope, token_type: TOKEN_TYPE
 		)
@@ -69,7 +73,7 @@ class Token {
 
 	public void init(){
 
-		if (!authenticated_userid || !access_token || !authenticated_userid?.endsWith(CONSENT_USER_SUFFIX)){
+		if (!authenticated_userid || !access_token || !authenticated_userid?.contains(CONSENT_USER_SUFFIX)){
 			consentToken = Boolean.FALSE
 			return
 		}

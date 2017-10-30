@@ -22,6 +22,11 @@ class UserProfileController {
 
 	private static final Logger logger = LoggerFactory.getLogger(UserProfileController.class);
 
+	// a workaround for Kong deleting refresh tokens after 14 days is to save refresh token
+	//   separately from its origianl access token, and set TTL on this custom token to nil (keep forever)
+	//   to identify custom tokens later, the expires_in is set to 1010
+	public static long REFRESH_TOKEN_MAGIC = 1010L
+
 	@Value('${as.log.verbose}')
 	private boolean verboseLogs = false
 
@@ -85,10 +90,11 @@ class UserProfileController {
 			displayToken.issuedStr = new Date(issued).format("yyyy-MM-dd")
 			displayToken.issuedHint = new Date(issued).format("HH:mm:ss")
 			long expiresIn = kongToken.expires_in
-			if (expiresIn == 0l){
+			if (expiresIn == 0l || expiresIn == REFRESH_TOKEN_MAGIC){
 				displayToken.expiresStr = "Never"
-				displayToken.expiresHint = ""
-			}else {
+				displayToken.expiresHint = (expiresIn==REFRESH_TOKEN_MAGIC?"This is a refresh token":"")
+				displayToken.access_token="" // don't return token itself, for extra security
+			}else{
 				long expires = kongToken.created_at + expiresIn * 1000
 				displayToken.expiresStr = new Date(expires).format("yyyy-MM-dd")
 				displayToken.expiresHint = new Date(expires).format("HH:mm:ss")
@@ -102,7 +108,7 @@ class UserProfileController {
 			displayToken.name = apps[appId]?.name
 			displayToken.callbacks = apps[appId]?.displayRedirects()
 			displayToken.host = apps[appId]?.redirectHost()
-			displayToken.access_token = kongToken.access_token
+			//displayToken.access_token = kongToken.access_token
 			if (kongToken.isConsentToken()){
 				consents.add(displayToken)
 			}else
@@ -118,9 +124,10 @@ class UserProfileController {
 			return null
 		Map response = kong.getMap(kong.getTokenQuery(tokenId))
 		// either token, or {"message":"Not found"}
-		if (response &&
-				(response.authenticated_userid == userId
-				|| response.authenticated_userid == userId+Token.CONSENT_USER_SUFFIX))
+		if (response && response.authenticated_userid &&
+			(response.authenticated_userid.equalsIgnoreCase(userId)
+			|| response.authenticated_userid.equalsIgnoreCase(Token.generateConsentTokenString(userId, KongContract.AUTHORIZE_CODE_FLOW))
+			|| response.authenticated_userid.equalsIgnoreCase(Token.generateConsentTokenString(userId, KongContract.AUTHORIZE_IMPLICIT_FLOW))))
 			return response
 		else
 			return null

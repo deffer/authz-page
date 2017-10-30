@@ -13,7 +13,6 @@ body {
     font-size: 16px;
 }
 .container{
-    margin-top: 48px;
     font-family: 'NationalBook', sans-serif;
     line-height: 1.5;
     color: #4a4c4c;
@@ -27,6 +26,7 @@ body {
 }
 
 .auth-panel {
+    margin-top: 48px;
     border: 1px solid #c9d3dd;
     font-size: 1.2em;
 }
@@ -45,6 +45,11 @@ body {
 .auth-panel input[type=checkbox] {
     margin-top: 0.5em;
 }
+
+.developer-panel {
+    margin-top: 48px;
+}
+
 /* styling other panels */
 .panel .panel-heading {
     font-size: 1.2em;
@@ -104,6 +109,9 @@ label {
     border-radius: 4px;
 }
 
+.jumbotron {
+    margin-top: 48px;
+}
 .jumbotron p {
     font-size: 1.1em;
     text-align:justify
@@ -203,7 +211,7 @@ h2.media-heading {
 }
 
 .title-with-hint span {
-    font-size: 30px;
+    font-size: 1.4em;
     margin-top: 20px;
     margin-bottom: 10px;
 }

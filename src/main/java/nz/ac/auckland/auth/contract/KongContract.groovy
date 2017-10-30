@@ -32,6 +32,11 @@ class KongContract {
 	public static final String RES_SCOPES = "/scope"
 
 
+	// options for response_type when calling oauth/authorize endpoint.
+	// WARNING: these values are also referenced in the property file
+	public static final String AUTHORIZE_CODE_FLOW = "code"
+	public static final String AUTHORIZE_IMPLICIT_FLOW = "token"
+
 	@Value('${kong.admin.url}')
 	private String kongAdminUrl //= "https://api.dev.auckland.ac.nz/service/kong-loopback-api";
 
@@ -230,8 +235,9 @@ class KongContract {
 		return map
 	}
 
-	public List<Token> getConsentTokens(String userId, String clientAppId=null){
-		Map response = getMap(listTokensQuery(userId+Token.CONSENT_USER_SUFFIX, clientAppId))
+	public List<Token> getConsentTokens(String userId, String flow, String clientAppId=null){
+		String tokenString = Token.generateConsentTokenString(userId, flow)
+		Map response = getMap(listTokensQuery(tokenString, clientAppId))
 		if (response.data) {
 			response.data?.collect { JsonHelper.convert(it, Token.class) }
 		}else
@@ -241,13 +247,22 @@ class KongContract {
 	public List<Token> getTokens4User(String userId){
 		List<Token> result = []
 		Map accessTokens = getMap(listTokensQuery(userId))
-		Map consentTokens = getMap(listTokensQuery(userId+Token.CONSENT_USER_SUFFIX))
+		Map consentTokensCodeFlow = getMap(listTokensQuery(
+				Token.generateConsentTokenString(userId, AUTHORIZE_CODE_FLOW)))
+		Map consentTokensImplicitFlow = getMap(listTokensQuery(
+				Token.generateConsentTokenString(userId, AUTHORIZE_IMPLICIT_FLOW)))
+
+		//join consent tokens into one map
+		List consentTokens = []
+		if (consentTokensCodeFlow?.data) consentTokens.addAll((List)consentTokensCodeFlow.data)
+		if (consentTokensImplicitFlow?.data) consentTokens.addAll((List)consentTokensImplicitFlow.data)
+
 		accessTokens?.data?.each {Map tokenData->
 			Token token = JsonHelper.convert(tokenData, Token.class)
 			token.consentToken = Boolean.FALSE
 			result.add(token)
 		}
-		consentTokens?.data?.each {Map tokenData->
+		consentTokens.each {Map tokenData->
 			Token token = JsonHelper.convert(tokenData, Token.class)
 			token.init()
 			if (token.isConsentToken())

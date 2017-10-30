@@ -10,7 +10,8 @@ public class AuthRequest {
 
 	public static final String REMEMBER_NOT = "remember-not"
 	public static final String REMEMBER_FOREVER = "remember-forever"
-	public static final String REMEMBER_MONTH = "remember-month"
+	public static final String REMEMBER_MONTH = "remember-month" // not used. waiting for to support customized TTL
+	public static final String REMEMBER_2WEEKS = "remember-2weeks"
 
 	// required by OAuth2 spec and set by client
 	String client_id;
