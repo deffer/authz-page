@@ -4,8 +4,13 @@
 <body>
 	<div th:replace="fragments/header :: header (name=${name})"></div>
 
-	<div class="container uoa-container">
-		<form action="#" th:action="@{/{apid}/auth/submit(apid=${apiid})}" th:object="${map}" method="post">
+	<div class="main-content general-content sticky-footer">
+		<main id="main">
+			<div class="section responsiveGrid"><div class="uoa-section"><div class="container">
+				<div class="row">
+					<div id="col-new" class="col-xs-12 col-md-2"></div>
+					<div id="col-login" class="col-xs-12 col-md-8">
+						<form action="#" th:action="@{/{apid}/auth/submit(apid=${apiid})}" th:object="${map}" method="post">
 			<!-- original request parameters, to pass on Submit -->
 			<input type="hidden" th:field="*{client_id}"/>
 			<input type="hidden" th:field="*{response_type}"/>
@@ -14,14 +19,15 @@
 			<input type="hidden" th:field="*{scope}"/>
 			<input type="hidden" th:field="*{use_fragment}"/>
 			<!--div class="jumbotron" th:switch="${clientError}"-->
-			<div class="panel auth-panel" th:switch="${clientError}"><div class="panel-body">
-				<div th:case="${null}" id="div_ask_user">
+			<div class="auth-panel rounded" th:switch="${clientError}" style="background: whitesmoke;"><div class="panel-body">
+				<div th:case="${null}" class="container" id="div_ask_user">
 					<div class="row">
-						<div class="col-md-offset-1 col-md-10"><h2>Authorize application</h2></div>
+						<div><h2 class="text-center">Authorize application</h2></div>
 					</div>
 
 					<div class="row">
-						<div class="col-md-offset-1 col-md-10 col-xs-12 col-xs-offset-0">
+						<div class="col-md-1 col-xs-0"></div>
+						<div class="col-md-10 col-xs-12">
 							<span class="texthighlight" th:text="${appname}"></span>
 							wants to access your profile. If you approve, authorization code will be sent to <span class="urlhighlight" th:text="${apphost}" th:title="${appurl}"></span>
 							This code can be used to access information about you.
@@ -37,31 +43,33 @@
 					<div th:if="${rememberme==true and #strings.isEmpty(clientWarning)}" >
 						<hr/>
 						<div th:if="${map.response_type=='token'}" class="row">
-						<div class="col-md-offset-1 col-xs-offset-0 col-xs-6">
-							<label for="remember">Remember my decision</label>
-								<!--p class="margin-bottom-s">Remember my decision:</p-->
-							<select class="form-control" name="remember" id="remember">
-								<option id="remember-not" value="remember-not"
-									title="You will be prompted again next time you use the application">
-									No, ask me again next time
-								</option>
-								<option id="remember-2weeks" value="remember-2weeks"
-									title="If you want to continue to use the app after two weeks, you will be asked again.">
-									For two weeks
-								</option>
-								<option id="remember-forever" value="remember-forever"
-									title="You will not be asked to authorize this access again. You can revoke it any time from your Application pages">
-									Until I revoke it
-								</option>
-							</select>
-							<div style="font-size: 70%;">
-								<a href="/self" target="_blank">View my tokens and applications</a>
+							<div class="col-md-1 col-xs-0"></div>
+							<div class="col-md-6 col-xs-12">
+								<label for="remember">Remember my decision</label>
+									<!--p class="margin-bottom-s">Remember my decision:</p-->
+								<select class="form-control" name="remember" id="remember">
+									<option id="remember-not" value="remember-not"
+										title="You will be prompted again next time you use the application">
+										No, ask me again next time
+									</option>
+									<option id="remember-2weeks" value="remember-2weeks"
+										title="If you want to continue to use the app after two weeks, you will be asked again.">
+										For two weeks
+									</option>
+									<option id="remember-forever" value="remember-forever"
+										title="You will not be asked to authorize this access again. You can revoke it any time from your Application pages">
+										Until I revoke it
+									</option>
+								</select>
+								<div style="font-size: 90%;">
+									<a href="/self" target="_blank">View my tokens and applications</a>
+								</div>
 							</div>
-						</div>
 						</div>
 
 						<div th:if="${map.response_type=='code'}" class="row">
-							<div class="col-md-offset-1 col-xs-offset-0 col-xs-6">
+							<div class="col-md-1 col-xs-0"></div>
+							<div class="col-md-10 col-xs-6">
 								<div class="checkbox">
 									<label>
 										<input type="checkbox" name="remember" value="remember-forever"/>
@@ -74,75 +82,114 @@
 									<a href="/self" target="_blank">View my tokens and applications</a>
 								</div>
 							</div>
-
 						</div>
 
 						<hr/>
 					</div>
 
 					<div class="row">
-						<div class="col-md-offset-1 col-md-6 col-xs-12 col-xs-offset-0">
-							<button type="submit" class="btn btn-allow" value="Allow" name="actionAllow">Authorize application</button>
+						<div class="col-md-1 col-xs-0"></div>
+						<div class="col-md-6 col-xs-12">
+							<!--<button type="submit" class="btn btn-allow" value="Allow" name="actionAllow">Authorize application</button-->
+							<button type="submit" class="cta cta--dark-blue-auth login-button" value="Allow" name="actionAllow">Authorize application</button>
 						</div>
-						<div class="col-md-3 col-xs-12">
-							<button type="submit" class="btn btn-warning" value="Deny" name="actionDeny">Deny</button>
+						<div class="col-md-4 col-xs-12">
+							<button type="submit" class="cta btn btn--white" value="Deny" name="actionDeny">Deny</button>
 						</div>
 					</div>
 				</div>
 
 
-				<div th:case="noauth_api" id="div_api_noauth">
-					<div class="media-left">
-						<i class="fa fa-hand-paper-o" aria-hidden="true"></i>
+				<div th:case="noauth_api" id="div_api_noauth" class="container">
+					<div class="row">
+						<div><h2 class="text-center">Authorization Error</h2></div>
 					</div>
-					<div class="media-body">
-						<h2 class="media-heading">Authorize application</h2>
-						<p>Requested API access (OAuth2) is not supported with this API. There could be two reasons for seeing this error:
-							the client application you are using is outdated or our API is not configured properly. We have logged this issue
-							with our support team for investigation.</p>
-					</div>
-				</div>
-				<div th:case="unknown_api" id="div_error_api_not_found">
-					<div class="media-left">
-						<i class="fa fa-question" aria-hidden="true"></i>
-					</div>
-					<div class="media-body">
-						<h2 class="media-heading">Authorize application</h2>
-						<p>This is a request for an unknown API. The link is broken or the API was decommissioned. Please report this error to the application developer.</p>
+
+					<div class="row">
+						<div class="col-md-3 col-xs-12 auth-warn-image  mx-auto text-center">
+							<i class="fa fa-hand-paper-o" aria-hidden="true"></i>
+						</div>
+						<div class="col-md-9 col-xs-12">
+							<p>Requested API access - OAuth2 - is not supported with this API. There could be two reasons for seeing this error:
+								the client application you are using is out of date, or our API is not configured properly. We have logged this issue
+								with our <a href="mailto:api-team@list.auckland.ac.nz">API Support Team</a> for investigation.</p>
+						</div>
 					</div>
 				</div>
-				<div th:case="unknown_client" id="div_error_client_not_found">
-					<div class="media-left">
-						<i class="fa fa-frown-o" aria-hidden="true"></i>
+
+				<div th:case="unknown_api" id="div_error_api_not_found" class="container">
+					<div class="row">
+						<div><h2 class="text-center">Authorization Error</h2></div>
 					</div>
-					<div class="media-body">
-						<h2 class="media-heading">Authorize application</h2>
-						<p>Sorry, application which sent you to this page is not registered with us. We've  blocked this request to keep you safe.</p>
+
+					<div class="row">
+						<div class="col-md-3 col-xs-12 auth-warn-image mx-auto text-center">
+							<span>
+							<i class="fa fa-question" aria-hidden="true"></i>
+							</span>
+						</div>
+						<div class="col-md-9 col-xs-12">
+							<p>This is a request for an unknown API - the link is broken or the API was decommissioned.
+								If you believe this is a mistake, please contact our <a href="mailto:api-team@list.auckland.ac.nz">API Support Team</a>
+								or report this problem to the application which sent you here.
+							</p>
+						</div>
 					</div>
 				</div>
-				<div th:case="callback_match" id="div_error_callback_nomatch">
-					<h2>Authorize application</h2>
-					<p>We couldn't verify the identity of the calling application - mismatched callback url. We've blocked this request to keep you safe.
-					You can report this error to the application which sent you here.
-					</p>
-					<div class="alert alert-danger" role="alert">
-						Application <span class="texthighlight" th:text="${appname}"></span>
-						is registered as <span class="urlhighlight" th:text="${clientWarning}"></span>
-						while current request wants to send the access code to <span class="urlhighlight" th:text="${appurl}"></span>
+
+				<div th:case="unknown_client" id="div_error_client_not_found" class="container">
+					<div class="row">
+						<div><h2 class="text-center">Authorization Error</h2></div>
+					</div>
+
+					<div class="row">
+						<div class="col-md-3 col-xs-12 auth-warn-image  mx-auto text-center">
+							<i class="fa fa-frown-o" aria-hidden="true"></i>
+						</div>
+						<div class="col-md-9 col-xs-12">
+							<p>Sorry, application which sent you to this page is not registered with us. We've  blocked this request to keep you safe.</p>
+						</div>
+					</div>
+				</div>
+
+				<div th:case="callback_match" id="div_error_callback_nomatch" class="container">
+					<div class="row">
+						<h2 class="text-center">Authorization Error</h2>
+					</div>
+
+					<div class="row">
+						<div class="col-md-1 col-xs-0"></div>
+						<div class="col-md-10 col-xs-12">
+							<p>We couldn't verify the identity of the calling application - mismatched callback url. We've blocked this request to keep you safe.
+							You can report this error to the application which sent you here.
+							</p>
+						</div>
 					</div>
 					<div class="row">
-						<a href="https://auckland.ac.nz" class="btn btn-allow">Home</a>
+						<div class="col-md-1 col-xs-0"></div>
+						<div class="col-md-10 col-xs-12 alert alert-danger" role="alert">
+							Application <span class="texthighlight" th:text="${appname}"></span>
+							is registered as <span class="urlhighlight" th:text="${clientWarning}"></span>
+							while current request wants to send the access code to <span class="urlhighlight" th:text="${appurl}"></span>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-md-1 col-xs-0"></div>
+						<div class="col-md-10 col-xs-12">
+							<a href="https://auckland.ac.nz" class="cta cta--dark-blue-auth">Home</a>
+						</div>
 					</div>
 
 				</div>
 			</div></div> <!-- end of panel -->
 
-			<div class="row"  th:if="${scopes != null } and not ${scopes.size()==0}">
-				<div class="col-sm-12" style="margin-top: 40px;">
-					<h4 class="scopes-header">Requested access</h4>
+
+			<div class="row clear privacy-note" id="scopes_header" th:if="${scopes != null } and not ${scopes.size()==0}">
+				<div class="col-sm-12 col-md-12 sectionheading" style="margin-top: 40px;">
+					<h4 class="login-white">Requested access</h4>
 				</div>
 			</div>
-			<div class="row">
+			<div class="row" id="scopes_container">
 				<div th:each="ascope: ${scopes}" class="col-sm-6">
 					<div class="bs-callout" th:classappend="${ascope.warn} ? bs-callout-danger : bs-callout-primary">
 						<h4 th:text="${ascope.key}"></h4>
@@ -151,15 +198,15 @@
 				</div>
 			</div>
 
-			<div class="panel panel-danger" th:if="${debug}">
+			<div class="card card-danger" th:if="${debug}">
 				<div class="panel-heading panel-heading-collapsible">
-					<div class="panel-title">
+					<div class="card-title">
 						<a role="button" data-toggle="collapse" href="#collapseDebugPanel" aria-expanded="false" class="collapsed">
 							Debug services
 						</a>
 					</div>
 				</div>
-				<div class="panel-body collapse" id="collapseDebugPanel">
+				<div class="card-block panel-body collapse" id="collapseDebugPanel">
 
 					<div class="panel">
 						<div class="panel-body">
@@ -181,7 +228,10 @@
 			</div>
 
 		</form>
-
+					</div>
+				</div>
+			</div></div></div>
+		</main>
 	</div>
 	<!-- /container -->
 

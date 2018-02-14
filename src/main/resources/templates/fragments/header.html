@@ -1,7 +1,38 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
-<div th:fragment="header(name)" id='header'>
+
+<header th:fragment="header(name)" id="header" role="banner" class="main-header">
+    <div class="container" role="presentation">
+        <div class="row" role="presentation">
+            <div class="col-xs-12 col-lg-2">
+                <a href="https://www.auckland.ac.nz" class="logo" aria-label="University of Auckland - Main Site">
+                    <svg class="icon icon-logo hidden-md-down" focusable="false" aria-hidden="true">
+                        <title>University of Auckland - Main Site</title>
+                        <use xlink:href="/static/images/sprite.svg#logo-big"></use>
+                    </svg>
+                    <svg class="icon icon-logo hidden-lg-up" focusable="false" aria-hidden="true">
+                        <title>University of Auckland - Main Site</title>
+                        <use xlink:href="/static/images/sprite.svg#logo-small"></use>
+                    </svg>
+                    <span class="sr-only">The University of Auckland, New Zealand - Te Whare W&#257;nanga o T&#257;maki Makaurau</span>
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="embed-section hidden-lg-up">
+        <div class="frontpage-banner">
+            <div class="frontpage-banner__img">
+                <img src="/static/images/mobile-banner.jpg"
+                     srcset="/static/images/mobile-lg.jpg 992w,
+                             /static/images/mobile-md.jpg 768w,
+                             /static/images/mobile-sm.jpg 576w" sizes="100vw" />
+            </div>
+        </div>
+    </div>
+</header>
+
+<!--div th:fragment="header(name)" id='header'>
     <div class="uoa-header-content">
         <a href="/">
             <img alt="UoA" src="https://iam.auckland.ac.nz/static/7wjBIGzZfYiiBJ9LBDmme95ZVv9LqSFXfCSS35S9yto.jpg" data-aui-responsive-header-index="0"/>
@@ -15,6 +46,6 @@
             </div>
         </form>
     </div>
-</div>
+</div-->
 </body>
 </html>

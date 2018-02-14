@@ -1,0 +1,264 @@
+.auth-panel {
+    margin-top: 48px;
+    border: 1px solid #c9d3dd;
+}
+
+.auth-panel h2{
+    font-family: 'NationalBold', sans-serif;
+    margin-bottom: 0.6em;
+    margin-top: 0.6em;
+    color: #00467f;
+}
+
+.rounded {
+    border-radius: 0.25rem !important;
+}
+
+/* size of the error images */
+.auth-warn-image i.fa {
+    font-size: 8em;
+}
+
+.auth-warn-image{
+    padding-bottom: 0.5em;
+}
+
+/* yeah, dont know why its misaligned... */
+.auth-panel input[type=checkbox] {
+    margin-top: 0.5em;
+}
+
+.text-center {
+    text-align: center!important;
+}
+
+.texthighlight {
+    padding: 2px 4px;
+    font-size: 1.1em;
+    color: #c7254e;
+    font-weight: bold;
+    /*background-color: #f9f2f4;
+    border-radius: 4px;*/
+}
+
+.urlhighlight {
+    padding: 2px 4px;
+    font-size: 90%;
+    background-color: #f9f2f4;
+    border-radius: 4px;
+}
+
+.cta--dark-blue-auth {
+    background-color: #00467f;
+    color: #fff;
+    border: solid 2px #00467f;
+    -webkit-border-radius: 1.7rem;
+    border-radius: 1.7rem;
+    max-width: 388px;
+    padding: 0.6rem 2rem 0.6em 2rem;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    text-align: left;
+    transition: .3s;
+    line-height: 1.2;
+    margin: 0.5rem 0.5rem 1.5rem 0.5rem;
+    outline: none;
+}
+
+button.cta--dark-blue-auth:hover, button.cta--dark-blue-auth:focus {
+    background-color: transparent; !important;
+    color: #00467f; !important;
+    border: solid 2px #00467f;
+    outline: none;
+}
+
+
+/* - missing bootstrap components ------- */
+.m-auto {
+    margin: auto !important;
+}
+
+.mt-auto,
+.my-auto {
+    margin-top: auto !important;
+}
+
+.mr-auto,
+.mx-auto {
+    margin-right: auto !important;
+}
+
+.mb-auto,
+.my-auto {
+    margin-bottom: auto !important;
+}
+
+
+.alert {
+    position: relative;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1rem;
+    border: 1px solid transparent;
+    border-radius: 0.25rem;
+}
+
+.alert-heading {
+    color: inherit;
+}
+
+.alert-link {
+    font-weight: 700;
+}
+
+.alert-dismissible {
+    padding-right: 4rem;
+}
+
+.alert-dismissible .close {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 0.75rem 1.25rem;
+    color: inherit;
+}
+
+.alert-primary {
+    color: #004085;
+    background-color: #cce5ff;
+    border-color: #b8daff;
+}
+
+.alert-primary hr {
+    border-top-color: #9fcdff;
+}
+
+.alert-primary .alert-link {
+    color: #002752;
+}
+
+.alert-secondary {
+    color: #383d41;
+    background-color: #e2e3e5;
+    border-color: #d6d8db;
+}
+
+.alert-secondary hr {
+    border-top-color: #c8cbcf;
+}
+
+.alert-secondary .alert-link {
+    color: #202326;
+}
+
+.alert-success {
+    color: #155724;
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+}
+
+.alert-success hr {
+    border-top-color: #b1dfbb;
+}
+
+.alert-success .alert-link {
+    color: #0b2e13;
+}
+
+.alert-info {
+    color: #0c5460;
+    background-color: #d1ecf1;
+    border-color: #bee5eb;
+}
+
+.alert-info hr {
+    border-top-color: #abdde5;
+}
+
+.alert-info .alert-link {
+    color: #062c33;
+}
+
+.alert-warning {
+    color: #856404;
+    background-color: #fff3cd;
+    border-color: #ffeeba;
+}
+
+.alert-warning hr {
+    border-top-color: #ffe8a1;
+}
+
+.alert-warning .alert-link {
+    color: #533f03;
+}
+
+.alert-danger {
+    color: #721c24;
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+}
+
+.alert-danger hr {
+    border-top-color: #f1b0b7;
+}
+
+.alert-danger .alert-link {
+    color: #491217;
+}
+
+.alert-light {
+    color: #818182;
+    background-color: #fefefe;
+    border-color: #fdfdfe;
+}
+
+.alert-light hr {
+    border-top-color: #ececf6;
+}
+
+.alert-light .alert-link {
+    color: #686868;
+}
+
+.alert-dark {
+    color: #1b1e21;
+    background-color: #d6d8d9;
+    border-color: #c6c8ca;
+}
+
+.alert-dark hr {
+    border-top-color: #b9bbbe;
+}
+
+.alert-dark .alert-link {
+    color: #040505;
+}
+
+/*.media {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-align: start;
+    -ms-flex-align: start;
+    align-items: flex-start;
+}
+
+.media-body {
+    -webkit-box-flex: 1;
+    -ms-flex: 1;
+    flex: 1;
+}*/
+
+
+.panel-heading-collapsible a:after {
+    font-family:'Glyphicons Halflings';
+    content:"\e114";
+    float: right;
+    color: grey;
+}
+.panel-heading-collapsible a.collapsed:after {
+    content:"\e080";
+}
+
+/* ---------------- */
