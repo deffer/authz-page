@@ -31,3 +31,30 @@ function deleteToken(token){
     });
 
 }
+
+// jQuery plugin to prevent double submission of forms
+// https://stackoverflow.com/questions/2830542/prevent-double-submission-of-forms-in-jquery
+jQuery.fn.preventDoubleSubmission = function() {
+    //console.log ('adding double-submit prevention to a form');
+    $(this).on('submit',function(e){
+        var $form = $(this);
+
+        if ($form.data('submitted') === true) {
+            // Previously submitted - don't submit again
+            e.preventDefault();
+        } else {
+            // Mark it so that the next submit can be ignored
+            // ADDED requirement that form be valid (doesnt work)
+            //if($form.valid()) {
+                $form.data('submitted', true);
+            //}
+        }
+    });
+
+    // Keep chainability
+    return this;
+};
+
+$(function() {
+    $('form').preventDoubleSubmission();
+});
