@@ -19,7 +19,7 @@
 			<input type="hidden" th:field="*{scope}"/>
 			<input type="hidden" th:field="*{use_fragment}"/>
 			<!--div class="jumbotron" th:switch="${clientError}"-->
-			<div class="auth-panel rounded" th:switch="${clientError}" style="background: whitesmoke;"><div class="panel-body">
+			<div class="auth-panel rounded" th:switch="${clientError}"><div class="panel-body">
 				<div th:case="${null}" class="container" id="div_ask_user">
 					<div class="row">
 						<div><h2 class="text-center">Authorize application</h2></div>
@@ -198,33 +198,41 @@
 				</div>
 			</div>
 
-			<div class="card card-danger" th:if="${debug}">
-				<div class="panel-heading panel-heading-collapsible">
-					<div class="card-title">
-						<a role="button" data-toggle="collapse" href="#collapseDebugPanel" aria-expanded="false" class="collapsed">
-							Debug services
-						</a>
-					</div>
-				</div>
-				<div class="card-block panel-body collapse" id="collapseDebugPanel">
+			<div class="accordion" th:if="${debug}" role="tablist" aria-multiselectable="true">
 
-					<div class="panel">
-						<div class="panel-body">
-						<h4>Changing upi</h4>
-						<p> You can override <code>upi</code> of logged-in user. Type new UPI and press Allow, Deny, or Enter Debug</p>
-						<p><input type="text" th:field="*{user_id}"/></p>
+				<div class="card card-danger card-inverse container">
+					<div class="card-header row" role="tab" id="headingOne">
+						<h6 class="mb-0 login-white">
+							<a data-toggle="collapse" data-parent="#accordion" href="#collapseOne" class="login-white" aria-expanded="false" aria-controls="collapseOne">
+								Debug services
+							</a>
+						</h6>
+					</div>
+
+					<div id="collapseOne" class="collapse row" role="tabpanel" aria-labelledby="headingOne">
+						<div class="card-block">
+							<div class="row">
+								<div class="col-md-1 col-xs-0"></div>
+								<div class="col-md-10 col-xs-12">
+									<h4>Changing upi</h4>
+									<p> You can override <code>upi</code> of  current user. Type new UPI and press Allow, Deny, or Enter Debug</p>
+									<p><input type="text" th:field="*{user_id}"/></p>
+								</div>
+							</div>
+							<div class="row">
+								<div class="col-md-1 col-xs-0"></div>
+								<div class="col-md-10 col-xs-12">
+									<h4>Debug mode</h4>
+									<p> You can use Debug mode to test approval step-by-step. Before redirecting back to application, you can see Kong's response.</p>
+									<p><button type="submit" class="cta btn btn--white" name="actionDebug" value="Debug" > Enter Debug</button></p>
+								</div>
+							</div>
 						</div>
+
 					</div>
 
-
-					<div class="panel">
-						<div class="panel-body">
-						<h4>Debug mode</h4>
-						<p> You can use Debug mode to test approval step-by-step. Before redirecting back to application, you can see Kong's response.</p>
-						<p><button type="submit" class="btn" name="actionDebug" value="Debug" > Enter Debug</button></p>
-						</div>
-					</div>
 				</div>
+
 			</div>
 
 		</form>

@@ -5,27 +5,35 @@
 <body>
 	<div th:replace="fragments/header :: header (name=${name})"></div>
 
-	<div class="container uoa-container-large">
-		<div>
-			<h1>Connected Applications</h1>
-			<p>
-				Applications need tokens to access your data. Tokens are created each time you log in and authorize the token request.
-				When token expires, you need to repeat the authorization process. If you selected auto approval for some applications,
-				you will only need be required to log in, after which application will be authorized automatically.
-			</p>
-			<p>
-				You can revoke tokens and auto-approval from the tables below.
-			</p>
+	<div class="main-content general-content sticky-footer">
+		<main id="main"><div class="section responsiveGrid"><div class="uoa-section"><div class="container auth-panel rounded">
+
+		<div class="row">
+			<div class="col-md-12 col-xs-12">
+				<h1>Connected Applications</h1>
+				<p>
+					Applications need tokens to access your data. Tokens are created each time you log in and authorize the token request.
+					When token expires, you need to repeat the authorization process. You may chose to select auto-approval
+					for applications you trust, so that next time the access is granted automatically. Depending on the
+					application capability, you may still be required to login if your session has expired.
+				</p>
+				<p>
+					You can revoke tokens and auto-approval from the tables below.
+				</p>
+			</div>
 		</div>
 
 		<div th:if="${!consents.isEmpty()}">
-			<div class="title-with-hint">
-				<span>Auto approval</span>
-				<i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
-				   title="These are sites you have approved explicitly. If the same site asks for the same access in the future, it will
-				be granted without prompting."></i>
-			</div>
-			<table class="table table-striped table-condensed table-bordered">
+			<div class="row mb-3" id="auto-approve-table">
+				<div class="col-md-12 col-xs-12">
+					<span class="title-with-hint">Auto approval</span>
+					<i class="fa fa-info-circle" data-toggle="tooltip" data-placement="right"
+					   title="These are sites you have approved explicitly. If the same site asks for the same access in the future, it will
+						be granted without prompting."></i>
+				</div>
+
+				<div class="col-md-12 cl-xs-12">
+					<table class="table table-striped table-sm table-bordered">
 				<thead>
 					<tr><th>Application</th><th>Application url</th><th>Scopes</th><th>Granted on</th><th>Expires</th><th>Options</th></tr>
 				</thead>
@@ -37,39 +45,47 @@
 						<td><span th:text="${app.issuedStr}"></span></td>
 						<td><span th:text="${app.expiresStr}"></span></td>
 						<td>
-							<a class="btn btn-xs" href="#" th:onclick="'deleteToken(\''+${app.id}+'\');'">
+							<a class="btna btna-xs" href="#" th:onclick="'deleteToken(\''+${app.id}+'\');'">
 								<span class="glyphicon glyphicon-trash disable-links"></span> Forget
 							</a>
 						</td>
 					</tr>
 				</tbody>
 			</table>
+				</div>
+			</div>
 		</div>
 
 		<div th:if="${!tokens.isEmpty()}">
-			<div class="title-with-hint">
-				<span>Active tokens</span>
-				<i class="glyphicon glyphicon-question-sign" data-toggle="tooltip" data-placement="top"
-				   title="Access tokens allow client applications to access your data even when you are not online.
-				   These tokens are usually short-lived."></i>
+			<div class="row mb-3" id="tokens-table">
+				<div class="col-md-12 col-xs-12">
+					<span class="title-with-hint">Active tokens</span>
+					<i class="fa fa-info-circle" data-toggle="tooltip" data-placement="right"
+				    title="Access tokens allow client applications to access your data even when you are not online.
+				    These tokens are usually short-lived."></i>
+				</div>
+				<div class="col-md-12 mb-3">
+					<table class="table table-striped table-sm table-bordered">
+						<thead>
+						<tr><th>Application</th><th>Scopes</th><th>Issued on</th><th>Expires on</th><th>Options</th></tr>
+						</thead>
+						<tbody>
+						<tr th:each="tk: ${tokens}">
+							<td><span th:text="${tk.name}" th:title="${tk.access_token}"></span></td>
+							<td><span th:text="${tk.scope}"></span></td>
+							<td><span th:text="${tk.issuedStr}" th:title="${tk.issuedHint}"></span></td>
+							<td><span th:text="${tk.expiresStr}" th:title="${tk.expiresHint}"></span></td>
+							<td>
+								<a class="btna btna-xs" href="#" th:onclick="'deleteToken(\''+${tk.id}+'\');'">
+								<span class="glyphicon glyphicon-trash"></span> Revoke
+								</a>
+								<!--button th:attr="data-validation-matches-message=#{tk.id}" type="button" class="btn btn-primary" data-toggle="modal" data-target="#myModal" ></button-->
+							</td>
+						</tr>
+						</tbody>
+					</table>
+				</div>
 			</div>
-
-			<table class="table table-striped table-condensed table-bordered">
-				<thead>
-					<tr><th>Application</th><th>Scopes</th><th>Issued on</th><th>Expires on</th><th>Options</th></tr>
-				</thead>
-				<tbody>
-					<tr th:each="tk: ${tokens}">
-						<td><span th:text="${tk.name}" th:title="${tk.access_token}"></span></td>
-						<td><span th:text="${tk.scope}"></span></td>
-						<td><span th:text="${tk.issuedStr}" th:title="${tk.issuedHint}"></span></td>
-						<td><span th:text="${tk.expiresStr}" th:title="${tk.expiresHint}"></span></td>
-						<td><a class="btn btn-xs" href="#" th:onclick="'deleteToken(\''+${tk.id}+'\');'">
-							<span class="glyphicon glyphicon-trash"></span> Revoke
-						</a></td>
-					</tr>
-				</tbody>
-			</table>
 		</div>
 
 		<div th:if="${tokens.isEmpty() and consents.isEmpty()}">
@@ -78,8 +94,12 @@
 			</div>
 		</div>
 
+		</div></div></div>
+		</main>
 	</div>
-	<!-- /container -->
+
+	<!--div th:replace="fragments/mymodal :: mymodal"></div-->
+
 	<div th:replace="fragments/footer :: footer"></div>
 </body>
 </html>

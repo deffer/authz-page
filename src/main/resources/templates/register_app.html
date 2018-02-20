@@ -5,15 +5,22 @@
 <body>
 <div th:replace="fragments/header :: header (name=${name})"></div>
 
-<div class="container uoa-container-large">
+<div class="main-content general-content sticky-footer">
+	<main id="main"><div class="section responsiveGrid"><div class="uoa-section"><div class="container">
 
-	<div class="alert alert-danger" role="alert">
-		<p>
-			This service is currently unavailable
-		</p>
-	</div>
+		<div class="row">
+			<div class="offset-md-2 offest-xs-0 col-md-8 col-xs-12">
+				<div class="alert alert-warning" role="alert" >
+					This service is currently unavailable.
+				</div>
+			</div>
+		</div>
 
+	</div></div></div>
+	</main>
 </div>
+
+
 <!-- /container -->
 <div th:replace="fragments/footer :: footer"></div>
 </body>

@@ -5,10 +5,26 @@
 <body>
 <div th:replace="fragments/header :: header (name=${name})"></div>
 
-<div class="container uoa-container-large">
+
+<div class="main-content general-content sticky-footer">
+<main id="main"><div class="section responsiveGrid"><div class="uoa-section"><div class="container">
+
+	<div class="row">
+		<div class="offset-md-2 offest-xs-0 col-md-8 col-xs-12">
+			<div class="alert alert-warning" role="alert" >
+				This service is currently unavailable.
+			</div>
+		</div>
+	</div>
+
+</div></div></div>
+</main>
+</div>
+
+
+<!--div class="container uoa-container-large">
 
 	<div class="panel panel-primary developer-panel">
-		<!-- Default panel contents -->
 		<div class="panel-heading">Registered Applications</div>
 		<div class="panel-body">
 			<p>The table below shows your registered OAuth2 applications. Application, also known
@@ -16,7 +32,6 @@
 			You must have a valid University account to be able to register applications.</p>
 		</div>
 
-		<!-- Table -->
 		<table class="table" th:if="${!apps.isEmpty()}">
 			<tr><th>Application Name</th><th>Client id</th><th>Callback URL(s)</th><th>Registered on</th><th>Options</th></tr>
 			<tr th:each="app: ${apps}">
@@ -51,7 +66,7 @@
 
 
 
-</div>
+</div-->
 <!-- /container -->
 <div th:replace="fragments/footer :: footer"></div>
 </body>

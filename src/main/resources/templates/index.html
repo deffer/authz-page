@@ -4,78 +4,105 @@
 <body>
 	<div th:replace="fragments/header :: header (name=${name})"></div>
 
-	<div class="container uoa-container">
-		<div class="jumbotron">
-			<h3>What is OAuth2</h3>
-			<p>OAuth 2 is an authorization framework which is commonly used by <em>applications</em>
-			to obtain limited access to user accounts on other websites
-			without having to share their password.
-			</p>
-			<p>In the University of Auckland, OAuth2 is used to protect the University APIs
-			and to enable user-controlled access to their information
-			such as enrollments, employment and identity attributes.
-			To connect to the University APIs, application <em>developer</em> needs to register
-			his or her application with the University first. Once its done, application
-			can connect to APIs by asking the <em>user</em> to authenticate and authorize the access.
-			The user is presented with a consent screen describing the type of access and
-			which application is requesting it. User can chose to Deny or Allow access.
-			Once access is approved, application can call API and receive information about the current user.
-			</p>
-			<img src="static/images/oauth2-uni-simple.png"/>
-			<p>
-			If you are a <strong>developer</strong> and would like to register your OAuth2 application and provision
-			client credentials, please go to the <a href="/developer" target="_blank">Developer section</a>.
-			</p><p>
-			If you are a <strong>student</strong> using the application, make sure to check the url of the application website
-			matches the redirect url. Be aware that once you authorize application, it will have access to your data
-			even when you are offline. You can view connected applications and active tokens on your
-			<a href="/self" target="_blank">Home page</a>
-			</p>
-		</div>
-		<div th:if="${debug}">
-			<h3>Quick links for test</h3>
-			<div class="margin-top-m">
-				<a href="/assessment-v2/oauth2/authorize?response_type=token&amp;redirect_uri=https://api.dev.auckland.ac.nz/explore/assessment-v2-docs/o2c.html&amp;realm=must_not_be_empty&amp;client_id=uoa-explorer-client&amp;scope=assessment-read&amp;state=assessment_oauth_implicit">
-					Assessment authorize token</a>
-			</div>
-			<div class="margin-top-m">
-				<a href="/assessment-v2/oauth2/authorize?response_type=code&amp;redirect_uri=https://api.dev.auckland.ac.nz/explore/assessment-v2-docs/o2c.html&amp;client_id=uoa-explorer-client&amp;scope=assessment-read&amp;state=assessment_oauth_implicit">
-					Assessment authorize code</a>
-			</div>
-			<div class="margin-top-m">
-				<a href="/assessment-v2/oauth2/authorize?response_type=code&amp;redirect_uri=https://api.dev.auckland.ac.nz/explore/assessment-v2-docs/o2c.html&amp;client_id=uoa-explorer-client&amp;state=assessment_oauth_implicit">
-					Assessment authorize code without any scope</a>
-			</div>
-			<div class="margin-top-m">
-				<a href="/identity-v2/oauth2/authorize?response_type=code&amp;redirect_uri=https://api.dev.auckland.ac.nz/explore/identity-v2-docs/o2c.html&amp;client_id=uoa-explorer-client">
-				Identity authorize code no scope (should show default)</a>
-			</div>
-			<div class="margin-top-m">
-				<a href="/identity-v2/oauth2/authorize?response_type=code&amp;redirect_uri=https://api.dev.auckland.ac.nz/explore/identity-v2-docs/o2c.html&amp;client_id=uoa-explorer-client&amp;scope=default,identity-read,identity-write">
-					Identity authorize code 3 scopes</a>
-			</div>
-			<div class="margin-top-m">
-				<a href="/identity-v2/oauth2/authorize?response_type=token&amp;redirect_uri=http://localhost:8080/app/o2c.html&amp;client_id=test-consent-client-id&amp;scope=default,identity-read">
-					Identity token for 2 scopes for external consumer with localhost</a>
-			</div>
-			<div class="margin-top-m">
-				<a href="/identity-v2/oauth2/authorize?response_type=token&amp;redirect_uri=https://changeme.com/callback/app/o2c.html&amp;client_id=test-rewrite-allowed-client&amp;scope=default,identity-read">
-					Identity token callback override (should show warning)</a>
-			</div>
-			<div class="margin-top-m">
-				<a href="/noapi-v2/oauth2/authorize?response_type=code&amp;redirect_uri=https://api.dev.auckland.ac.nz/explore/assessment-v2-docs/o2c.html&amp;client_id=uoa-explorer-client&amp;scope=assessment-read&amp;state=assessment_oauth_implicit">
-					Unknown API</a>.
-			</div>
-			<div class="margin-top-m">
-				<a href="/assessment-v2/oauth2/authorize?response_type=code&amp;redirect_uri=https://api.dev.auckland.ac.nz/explore/assessment-v2-docs/o2c.html&amp;client_id=uoa1-explorer-client&amp;scope=assessment-read&amp;state=assessment_oauth_implicit">
-					Unknown Client</a>
-			</div>
-			<div class="margin-top-m">
-				<a href="/assessment-v2/oauth2/authorize?response_type=code&amp;redirect_uri=https://api.dev.auckland.ac.nz/service/meta/v1/delay/5000&amp;client_id=uoa-explorer-client&amp;scope=assessment-read&amp;state=assessment_oauth_implicit">
-					Test delay</a>
-			</div>
-		</div>
-	</div> <!-- /container -->
+	<div class="main-content general-content sticky-footer">
+		<main id="main"><div class="section responsiveGrid"><div class="uoa-section"><div class="container">
+			<div class="row">
+				<div id="col-new" class="col-xs-12 col-md-1"></div>
+				<div id="col-login" class="col-xs-12 col-md-10">
+					<div class="auth-panel rounded">
+						<div class="row">
+							<div><h2 class="text-center">What is OAuth2</h2></div>
+						</div>
+						<div class="row">
+							<div class="col-md-1 col-xs-0"></div>
+							<div class="col-md-10 col-xs-12 mb-3">
+								<p>OAuth 2 is an authorization framework which is commonly used by <em>applications</em>
+								to obtain limited access to user accounts on other websites
+								without having to share their password.
+							</p>
+								<p>In the University of Auckland, OAuth2 is used to protect the University APIs
+								and to enable user-controlled access to their information
+								such as enrollments, employment and identity attributes.
+								To connect to the University APIs, application <em>developer</em> needs to register
+								his or her application with the University first. Once its done, application
+								can connect to APIs by asking the <em>user</em> to authenticate and authorize the access.
+								The user is presented with a consent screen describing the type of access and
+								which application is requesting it. User can chose to Deny or Allow access.
+								Once access is approved, application can call API and receive information about the current user.
+							</p>
+								<img src="static/images/oauth2-uni-simple.png"/>
+								<p>
+								If you are a <strong>developer</strong> and would like to register your OAuth2 application and provision
+								client credentials, please go to the <a href="/developer" target="_blank">Developer section</a>.
+							</p><p>
+							If you are a <strong>student</strong> using the application, make sure to check the url of the application website
+							matches the redirect url. Be aware that once you authorize application, it will have access to your data
+							even when you are offline. You can view connected applications and active tokens on your
+							<a href="/self" target="_blank">Home page</a>
+						</p>
+							</div>
+						</div>
+					</div>
+					<div th:if="${debug}" class="auth-panel container">
+						<div class="row">
+							<div><h3 class="text-center">Quick links for test (DEV only)</h3></div>
+						</div>
+
+						<div class="row">
+							<div class="offset-md-1 offest-xs-0 col-md-10 col-xs-12 mb-3">
+
+						<div class="margin-top-m">
+							<a href="/assessment-v2/oauth2/authorize?response_type=token&amp;redirect_uri=https://api.dev.auckland.ac.nz/explore/assessment-v2-docs/o2c.html&amp;realm=must_not_be_empty&amp;client_id=uoa-explorer-client&amp;scope=assessment-read&amp;state=assessment_oauth_implicit">
+								Assessment authorize token</a>
+						</div>
+						<div class="margin-top-m">
+							<a href="/assessment-v2/oauth2/authorize?response_type=code&amp;redirect_uri=https://api.dev.auckland.ac.nz/explore/assessment-v2-docs/o2c.html&amp;client_id=uoa-explorer-client&amp;scope=assessment-read&amp;state=assessment_oauth_implicit">
+								Assessment authorize code</a>
+						</div>
+						<div class="margin-top-m">
+							<a href="/assessment-v2/oauth2/authorize?response_type=code&amp;redirect_uri=https://api.dev.auckland.ac.nz/explore/assessment-v2-docs/o2c.html&amp;client_id=uoa-explorer-client&amp;state=assessment_oauth_implicit">
+								Assessment authorize code without any scope</a>
+						</div>
+						<div class="margin-top-m">
+							<a href="/identity-v2/oauth2/authorize?response_type=code&amp;redirect_uri=https://api.dev.auckland.ac.nz/explore/identity-v2-docs/o2c.html&amp;client_id=uoa-explorer-client">
+								Identity authorize code no scope (should show default)</a>
+						</div>
+						<div class="margin-top-m">
+							<a href="/identity-v2/oauth2/authorize?response_type=code&amp;redirect_uri=https://api.dev.auckland.ac.nz/explore/identity-v2-docs/o2c.html&amp;client_id=uoa-explorer-client&amp;scope=default,identity-read,identity-write">
+								Identity authorize code 3 scopes</a>
+						</div>
+						<div class="margin-top-m">
+							<a href="/identity-v2/oauth2/authorize?response_type=token&amp;redirect_uri=http://localhost:8080/app/o2c.html&amp;client_id=test-consent-client-id&amp;scope=default,identity-read">
+								Identity token for 2 scopes for external consumer with localhost</a>
+						</div>
+						<div class="margin-top-m">
+							<a href="/identity-v2/oauth2/authorize?response_type=token&amp;redirect_uri=https://changeme.com/callback/app/o2c.html&amp;client_id=test-rewrite-allowed-client&amp;scope=default,identity-read">
+								Identity token callback override (should show warning)</a>
+						</div>
+
+						<div class="margin-top-m">
+							<a href="/meta-v1/oauth2/authorize?response_type=code&amp;redirect_uri=https://api.dev.auckland.ac.nz/explore/assessment-v2-docs/o2c.html&amp;client_id=uoa-explorer-client&amp;scope=assessment-read&amp;state=assessment_oauth_implicit">
+								Incorrect API</a>
+						</div>
+						<div class="margin-top-m">
+							<a href="/noapi-v2/oauth2/authorize?response_type=code&amp;redirect_uri=https://api.dev.auckland.ac.nz/explore/assessment-v2-docs/o2c.html&amp;client_id=uoa-explorer-client&amp;scope=assessment-read&amp;state=assessment_oauth_implicit">
+								Unknown API</a>
+						</div>
+						<div class="margin-top-m">
+							<a href="/assessment-v2/oauth2/authorize?response_type=code&amp;redirect_uri=https://api.dev.auckland.ac.nz/explore/assessment-v2-docs/o2c.html&amp;client_id=uoa1-explorer-client&amp;scope=assessment-read&amp;state=assessment_oauth_implicit">
+								Unknown Client</a>
+						</div>
+						<div class="margin-top-m">
+							<a href="/assessment-v2/oauth2/authorize?response_type=code&amp;redirect_uri=https://api.dev.auckland.ac.nz/service/meta/v1/delay/5000&amp;client_id=uoa-explorer-client&amp;scope=assessment-read&amp;state=assessment_oauth_implicit">
+								Test delay</a>
+						</div>
+
+						</div></div>
+					</div>
+				</div>
+			</div></div></div></div>
+		</main>
+	</div>
 
 	<div th:replace="fragments/footer :: footer"></div>
 </body>

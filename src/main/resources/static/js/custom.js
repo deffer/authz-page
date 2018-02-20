@@ -57,4 +57,5 @@ jQuery.fn.preventDoubleSubmission = function() {
 
 $(function() {
     $('form').preventDoubleSubmission();
+    $('#myModal').modal('hide');
 });
