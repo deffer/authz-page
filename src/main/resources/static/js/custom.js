@@ -35,7 +35,7 @@ function deleteToken(token){
 // jQuery plugin to prevent double submission of forms
 // https://stackoverflow.com/questions/2830542/prevent-double-submission-of-forms-in-jquery
 jQuery.fn.preventDoubleSubmission = function() {
-    //console.log ('adding double-submit prevention to a form');
+    console.log ('adding double-submit prevention to a form');
     $(this).on('submit',function(e){
         var $form = $(this);
 
@@ -57,5 +57,10 @@ jQuery.fn.preventDoubleSubmission = function() {
 
 $(function() {
     $('form').preventDoubleSubmission();
-    $('#myModal').modal('hide');
+    $('form').submit(function(){
+        //$("#btonAllow").attr('disabled','disabled');
+        $("#btonAllow").prop('disabled',true);
+    });
+    $("#btonAllow").prop('disabled',false);
+    //$('#myModal').modal('hide');
 });
