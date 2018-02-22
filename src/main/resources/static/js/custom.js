@@ -40,14 +40,9 @@ jQuery.fn.preventDoubleSubmission = function() {
         var $form = $(this);
 
         if ($form.data('submitted') === true) {
-            // Previously submitted - don't submit again
             e.preventDefault();
         } else {
-            // Mark it so that the next submit can be ignored
-            // ADDED requirement that form be valid (doesnt work)
-            //if($form.valid()) {
-                $form.data('submitted', true);
-            //}
+            $form.data('submitted', true);
         }
     });
 
@@ -58,8 +53,8 @@ jQuery.fn.preventDoubleSubmission = function() {
 $(function() {
     $('form').preventDoubleSubmission();
     $('form').submit(function(){
-        //$("#btonAllow").attr('disabled','disabled');
         $("#btonAllow").prop('disabled',true);
+        $("#btonDeny").prop('disabled',true);
     });
     $("#btonAllow").prop('disabled',false);
     //$('#myModal').modal('hide');
