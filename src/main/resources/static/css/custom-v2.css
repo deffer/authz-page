@@ -82,6 +82,14 @@ button.cta--dark-blue-auth:hover:disabled, button.cta--dark-blue-auth:disabled {
     border-color: #adadad;
 }
 
+button.cta.btn.btn--white:hover:disabled, button.cta.btn.btn--white:disabled {
+    cursor: not-allowed;
+    opacity: .65;
+    color: #292b2c;
+    background-color: #e6e6e6;
+    border-color: #adadad;
+}
+
 button.cta--dark-blue-auth:hover, button.cta--dark-blue-auth:focus {
     background-color: transparent; !important;
     /*color: #00467f; !important;*/
