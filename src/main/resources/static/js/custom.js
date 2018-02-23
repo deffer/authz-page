@@ -54,7 +54,8 @@ $(function() {
     $('form').preventDoubleSubmission();
     $('form').submit(function(){
         $("#btonAllow").prop('disabled',true);
-        $("#btonDeny").prop('disabled',true);
+        $("#btonDeny").addClass('disabledlook');
+        //$("#btonDeny").prop('disabled',true);
     });
     $("#btonAllow").prop('disabled',false);
     //$('#myModal').modal('hide');
