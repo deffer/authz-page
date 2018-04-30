@@ -1,5 +1,7 @@
 # OAuth2 Authorization Server 
 
+https://wiki.auckland.ac.nz/display/APPLCTN/OAuth+Authorisation+Server
+
 Implements a user-facing Authorization Page to support a step in OAuth2 `Implicit` and `Authorization Code` flows. 
 Integrates with Kong, where Kong is used to manage codes/tokens and token-based access to APIs.
 The main purpose of Authorization Page is to authenticate the end user (through SSO configured on webroute) 
@@ -7,7 +9,7 @@ and relay user's consent to Kong. Kong will provision a code/token which is then
 
 ## Important
 
- * This version is intended to work with Kong versions 0.9.6 - 0.9.9
+ * This version is intended to work with Kong versions 0.9.6 - 0.9.9, 0.10.x
  * Make sure to put java.conf (from `deploy` folder) to the `/etc/authserver` after deployment
 
 ## Overview  
@@ -15,21 +17,22 @@ and relay user's consent to Kong. Kong will provision a code/token which is then
 Exposes two endpoints:
 
  * authorize endpoint `/oauth2/authorize` which returns code or token (based on request type), part of [OAuth2 spec](https://tools.ietf.org/html/rfc6749#section-3.1)
- * user profile endpoint `/self` - a user-facing page to allow self-service token revokation at `/self/token/{token}`
+ * user profile endpoint `/self` - a user-facing page to allow self-service token revocation at `/self/token/{token}`
  * a generic page at `/` to help users who got lost
 
 On top of OAuth2 protocol, it includes some customizations specific to University:
 
  * *trusted* consumers - for web application which are part of University web experience, the end user will not be asked to approve the access
- * *dynamic* consumers - common application credentials, can be used by any consumer and typically used on API Explorers. These consumers can provide an alternative `callback` uri (as long as it is on the same domain as registered in Kong)
- * something else
+ * *dynamic* consumers - consumers with varying callback, can be configured for any consumer and typically used on API Explorers. These consumers 
+ can provide an alternative `callback` uri on the call to `/oauth2/authorize` and this should be allowed as long as it is on the same domain as registered in Kong
+ * *remember my decision* - allowing user to _remember_ their decision (to approve) for 1 month and don't ask them again.
  
 
-## Building
+## Building manually
 
     mvn package
 
-Releasing
+Releasing manually
 
     mvn release:prepare
     mvn release:perform
@@ -73,7 +76,7 @@ and using java CI/CD pipeline for deployments.
 
 Properties can be found in `/etc/authserver/application.properties`
 Deployment jar is in `/usr/share/apis/autherserver`
-Logs are in `/var/log/apis/authserver`
+Logs are in `/var/log/apis/authserver/as.`
 
 To restart the service manually, run
 
@@ -92,7 +95,7 @@ place `authserver.spec` (which can be found in `deploy` folder) into `rpmbuild/S
     
 This will download the specified version of the jar from Nexus and package it as rpm.
 
-### Installing and running rpm
+### Installing and running rpm (deprecated)
 
 Without uploading to Uoa-apps-dev repo (because its usually not available), copy onto VM and install using yum
  
